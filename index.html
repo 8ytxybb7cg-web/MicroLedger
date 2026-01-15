@@ -161,10 +161,12 @@
         const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
         
-        // 確保 Supabase 已載入
-        let supabase;
+                        // 確保 Supabase 已載入
+        let supabaseClient;
         try {
-            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            // 使用 window.supabase 避免變數名稱衝突
+            const { createClient } = window.supabase;
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log("✅ Supabase initialized");
         } catch (e) {
             console.error("❌ Supabase init failed:", e);
@@ -175,11 +177,10 @@
         // 2. Intro 動畫控制器
         // =========================================
         const Intro = {
-    progress: 0,
-    isDataReady: false,
-    startTime: null,
-    minDuration: 2500,
-    finished: false,
+            progress: 0,
+            isDataReady: false, // 數據是否算好
+            startTime: null,
+            minDuration: 2500, // 強制最少播 2.5 秒 (儀式感)
             
             els: {
                 layer: document.getElementById('intro-layer'),
@@ -208,9 +209,7 @@
             start() {
                 console.log("🎬 Intro Animation Started");
                 this.startTime = performance.now();
-                this.showText(0);
-this.els.texts[0].style.opacity = '1';
-this.els.texts[0].style.transform = 'translateY(0)';
+                this.showText(0); // 立即顯示第一句
                 
                 // 開始 Animation Loop
                 requestAnimationFrame((t) => this.tick(t));
@@ -220,45 +219,45 @@ this.els.texts[0].style.transform = 'translateY(0)';
             },
 
             tick(now) {
-    const elapsed = now - this.startTime;
+                const elapsed = now - this.startTime;
 
-    // === Phase timing (ms) ===
-    const phase1End = 800;   // 0% → 70%
-    const phase2End = 1200;  // 70% → 90%
-    const holdEnd   = Math.max(this.minDuration, 2500); // 強制停留 90%
+                // --- 進度條邏輯 ---
+                
+                                // 階段 1: 0% -> 70% (加速：約 1 秒到達)
+                if (this.progress < 70) {
+                    this.progress += 1.2; 
+                }
+                // 階段 2: 70% -> 90% (調整速度：確保在 2.5s 前到達 90%，觸發等待文案)
+                else if (this.progress < 90) {
+                    this.progress += 0.35;
+                    this.showText(1); // 切換到 "逐筆核對"
+                }
+                // 階段 3: 卡在 90% (等待數據 OR 等待儀式感時間)
+                else if (this.progress >= 90) {
+                    
+                    // 判斷是否滿足解鎖條件：數據好了 AND 時間夠了
+                    const timeIsEnough = elapsed > this.minDuration;
+                    
+                    if (this.isDataReady && timeIsEnough) {
+                        // 衝刺到 100%
+                        this.progress += 2.0; 
+                    } else {
+                        // 繼續卡著，並顯示 "計算中，唔急"
+                        this.progress = 90;
+                        this.showText(2);
+                    }
+                }
 
-    // Phase 1: 0–70%
-    if (elapsed < phase1End) {
-        this.progress = (elapsed / phase1End) * 70;
-        this.showText(0);
-    }
-    // Phase 2: 70–90%
-    else if (elapsed < phase2End) {
-        this.progress = 70 + ((elapsed - phase1End) / (phase2End - phase1End)) * 20;
-        this.showText(1);
-    }
-    // Phase 3: 停留 90%
-    else {
-        this.progress = 90;
-        this.showText(2);
+                // 渲染
+                this.els.bar.style.width = Math.min(this.progress, 100) + '%';
 
-        const canFinish = this.isDataReady && elapsed >= holdEnd;
-        if (canFinish) {
-            this.progress = 100;
-        }
-    }
-
-    // Render
-    this.els.bar.style.width = this.progress + '%';
-
-    // Finish guard
-    if (this.progress >= 100 && !this.finished) {
-        this.finished = true;
-        this.finish();
-    } else {
-        requestAnimationFrame((t) => this.tick(t));
-    }
-},
+                // 結束檢查
+                if (this.progress >= 100) {
+                    this.finish();
+                } else {
+                    requestAnimationFrame((t) => this.tick(t));
+                }
+            },
 
             finish() {
                 this.showText(3); // 準備就緒
@@ -276,11 +275,11 @@ this.els.texts[0].style.transform = 'translateY(0)';
         const AppEngine = {
             data: { loans: [] },
 
-            async init() {
+                        async init() {
                 console.log("💾 Fetching Data...");
                 try {
                     // 抓取借貸紀錄
-                    const { data: loans, error } = await supabase
+                    const { data: loans, error } = await supabaseClient
                         .from('loan_records')
                         .select('*')
                         .order('transaction_date', { ascending: true });
