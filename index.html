@@ -208,7 +208,9 @@
             start() {
                 console.log("🎬 Intro Animation Started");
                 this.startTime = performance.now();
-                this.showText(0); // 立即顯示第一句
+                this.showText(0);
+this.els.texts[0].style.opacity = '1';
+this.els.texts[0].style.transform = 'translateY(0)';
                 
                 // 開始 Animation Loop
                 requestAnimationFrame((t) => this.tick(t));
