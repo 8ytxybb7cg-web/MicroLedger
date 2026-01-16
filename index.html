@@ -390,8 +390,8 @@
             async init() {
                 console.log("💾 Fetching Data from Supabase...");
                 try {
-                    // A. 抓取所有紀錄
-                    const { data: loans, error } = await supabase
+                                        // A. 抓取所有紀錄
+                    const { data: loans, error } = await supabaseClient
                         .from('loan_records')
                         .select('*')
                         .order('transaction_date', { ascending: true });
@@ -477,8 +477,8 @@
 
             // --- 智能利率抓取 (Cache -> API) ---
             async getHiborRate(dateStr) {
-                // 1. 查 Supabase Cache
-                const { data: cache } = await supabase
+                                // 1. 查 Supabase Cache
+                const { data: cache } = await supabaseClient
                     .from('hibor_cache')
                     .select('rate_value')
                     .eq('rate_date', dateStr)
@@ -489,9 +489,9 @@
                 // 2. 查 HKMA API
                 const rate = await this.fetchFromHKMA(dateStr);
                 
-                // 3. 寫入 Cache (如果抓到的話)
+                                // 3. 寫入 Cache (如果抓到的話)
                 if (rate !== null) {
-                    supabase.from('hibor_cache').insert([{ rate_date: dateStr, rate_value: rate }]).then();
+                    supabaseClient.from('hibor_cache').insert([{ rate_date: dateStr, rate_value: rate }]).then();
                     return rate;
                 }
 
@@ -604,14 +604,13 @@
             },
 
             // 新增記錄 (簡易版)
-            async addRecord() {
+                        async addRecord() {
                 const date = document.getElementById('input-date').value;
                 const desc = document.getElementById('input-desc').value;
                 const amount = document.getElementById('input-amount').value;
 
                 if (!date || !desc || !amount) return alert("請填寫所有欄位");
-
-                const { error } = await supabase.from('loan_records').insert([{
+                const { error } = await supabaseClient.from('loan_records').insert([{
                     transaction_date: date,
                     description: desc,
                     principal_amount: amount,
