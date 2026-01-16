@@ -294,8 +294,8 @@
 
             // 狀態文字切換 (增加防抖，避免重複觸發)
             showText(index) {
-                if (this.currentTextIndex === index) return;
-                this.currentTextIndex = index;
+    if (this.currentTextIndex === index) return;
+    this.currentTextIndex = index ?? 0;
 
                 this.els.texts.forEach((el, i) => {
                     if (i === index) {
@@ -442,10 +442,15 @@
                     this.data.loans = loans || [];
 
                     // B. 執行利滾利計算 (Real Math)
-                    await this.processAllLoans();
+// ⚠️ 加入 fail-safe，避免初始化被外部 API 卡死
+try {
+    await this.processAllLoans();
+} catch (e) {
+    console.warn("⚠️ processAllLoans skipped:", e);
+}
 
-                    // C. 計算總結
-                    this.calculateSummary();
+// C. 計算總結
+this.calculateSummary();
 
                     // D. 渲染介面
                     this.renderUI();
@@ -453,10 +458,13 @@
                     console.log("✅ Data Ready & Calculated!");
                     Intro.isDataReady = true; // 通知 Intro
 
-                } catch (err) {
-                    console.error("Engine Error:", err);
-                    alert("數據加載失敗：" + err.message);
-                }
+                catch (err) {
+    console.error("Engine Error:", err);
+    alert("數據加載失敗：" + err.message);
+
+    // ⚠️ 重要：避免 Intro 永久卡死
+    Intro.isDataReady = true;
+}
             },
 
             // --- 核心邏輯：逐筆計算複利 ---
