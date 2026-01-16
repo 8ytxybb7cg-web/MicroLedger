@@ -264,9 +264,9 @@
         // 1. 設定與初始化
         // =========================================
         const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cmhhdHpkeXBpd3dnbW1mYnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MTM4NzUsImV4cCI6MjA4MTA4OTg3NX0.s6w2f3pKovuFYkR09bLvPBVJUa6b3Uw2gIXrlw9teb8';
+    const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
         
-            // 確保 Supabase 已載入
+                        // 確保 Supabase 已載入
         let supabaseClient;
         try {
             // 使用 window.supabase 避免變數名稱衝突
@@ -276,7 +276,7 @@
                 alert("🔴 設定錯誤：\n您目前使用的是 Publishable Key (sb_publishable...)。\n這無法用於資料庫讀寫。\n\n請前往 Supabase > Project Settings > API，\n複製 'anon' / 'public' key (通常以 eyJ 開頭) 來替換程式碼中的 SUPABASE_KEY。");
             }
 
-            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY , {
                 auth: { persistSession: false } // 工具類應用不需要持久化登入
             });
             console.log("✅ Supabase initialized");
