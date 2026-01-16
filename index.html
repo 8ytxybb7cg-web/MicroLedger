@@ -82,30 +82,61 @@
             pointer-events: none;
         }
 
-        .intro-content { width: 80%; max-width: 300px; text-align: center; }
+        .intro-content {
+            width: 80%;
+            max-width: 300px;
+            text-align: center;
+        }
 
         .app-title {
-            font-size: 24px; font-weight: 600; letter-spacing: 4px;
-            margin-bottom: 50px; color: white; text-transform: uppercase;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            margin-bottom: 50px;
+            color: white;
+            text-transform: uppercase;
         }
 
-        /* 狀態文字與進度條 */
-        .status-text-container { height: 30px; margin-bottom: 15px; position: relative; }
+        /* 狀態文字區 */
+        .status-text-container {
+            height: 30px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
         .status-text {
-            font-size: 14px; color: var(--text-secondary);
-            position: absolute; width: 100%; left: 0; top: 0;
-            opacity: 0; transform: translateY(10px); transition: all 0.5s ease;
+            font-size: 14px;
+            color: var(--text-secondary);
+            position: absolute;
+            width: 100%;
+            left: 0; top: 0;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s ease;
         }
-        .status-text.active { opacity: 1; transform: translateY(0); }
-        .status-text.exit { opacity: 0; transform: translateY(-10px); }
 
-        .progress-track {
-            width: 100%; height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px; overflow: hidden;
+        .status-text.active {
+            opacity: 1;
+            transform: translateY(0);
         }
+
+        .status-text.exit {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        /* 進度條 */
+        .progress-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2); /* 加深底色確保可見 */
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
         .progress-bar {
-            height: 100%; width: 0%;
+            height: 100%;
+            width: 0%;
             background: var(--success-color);
             border-radius: 4px;
             box-shadow: 0 0 10px rgba(48, 209, 88, 0.5);
