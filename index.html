@@ -497,7 +497,10 @@ if (!error && cache) return cache.rate_value;
                 
                                 // 3. 寫入 Cache (如果抓到的話)
                 if (rate !== null) {
-                    supabaseClient.from('hibor_cache').insert([{ rate_date: dateStr, rate_value: rate }]).then();
+                    supabaseClient
+  .from('hibor_cache')
+  .insert([{ rate_date: dateStr, rate_value: rate }])
+  .catch(() => {});
                     return rate;
                 }
 
