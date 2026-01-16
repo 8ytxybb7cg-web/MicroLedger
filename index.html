@@ -264,15 +264,23 @@
         // 1. 設定與初始化
         // =========================================
         const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cmhhdHpkeXBpd3dnbW1mYnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MTM4NzUsImV4cCI6MjA4MTA4OTg3NX0.s6w2f3pKovuFYkR09bLvPBVJUa6b3Uw2gIXrlw9teb8';
         
                         // 確保 Supabase 已載入
         let supabaseClient;
         try {
             // 使用 window.supabase 避免變數名稱衝突
             const { createClient } = window.supabase;
-            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+            // 檢查 Key 格式 (常見錯誤修正)
+            if (SUPABASE_KEY.startsWith('sb_publishable')) {
+                alert("🔴 設定錯誤：\n您目前使用的是 Publishable Key (sb_publishable...)。\n這無法用於資料庫讀寫。\n\n請前往 Supabase > Project Settings > API，\n複製 'anon' / 'public' key (通常以 eyJ 開頭) 來替換程式碼中的 SUPABASE_KEY。");
+            }
+
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
+                auth: { persistSession: false } // 工具類應用不需要持久化登入
+            });
             console.log("✅ Supabase initialized");
+
         } catch (e) {
             console.error("❌ Supabase init failed:", e);
             alert("系統錯誤：Supabase 無法連接");
@@ -388,7 +396,7 @@
             hkmaBaseUrl: 'https://api.hkma.gov.hk/public/market-data-and-statistics/daily-monetary-statistics/daily-figures-interbank-liquidity',
 
             async init() {
-                console.log("💾 Fetching Data from supabaseClient...");
+                console.log("💾 Fetching Data from Supabase...");
                 try {
                                         // A. 抓取所有紀錄
                     const { data: loans, error } = await supabaseClient
@@ -477,14 +485,18 @@
 
             // --- 智能利率抓取 (Cache -> API) ---
             async getHiborRate(dateStr) {
-                                // 1. 查 Supabase Cache
-                const { data: cache } = await supabaseClient
-                    .from('hibor_cache')
-                    .select('rate_value')
-                    .eq('rate_date', dateStr)
-                    .single();
-
-                if (cache) return cache.rate_value;
+                                // 1. 查 Supabase Cache (使用 maybeSingle 避免無資料時報錯)
+                try {
+                    const { data: cache, error: cacheError } = await supabaseClient
+                        .from('hibor_cache')
+                        .select('rate_value')
+                        .eq('rate_date', dateStr)
+                        .maybeSingle();
+                    
+                    if (!cacheError && cache) return cache.rate_value;
+                } catch (e) {
+                    console.warn("Cache check skipped:", e);
+                }
 
                 // 2. 查 HKMA API
                 const rate = await this.fetchFromHKMA(dateStr);
@@ -495,8 +507,8 @@
                     return rate;
                 }
 
-                // 4. Fallback: 週末/假期抓不到，暫用 2.0% (或可寫邏輯往前找)
-                return 2.0; 
+                // 4. Fallback: 週末/假期抓不到，暫用 4.0% (或可寫邏輯往前找)
+                return 4.0; 
             },
 
             async fetchFromHKMA(dateStr) {
@@ -610,12 +622,16 @@
                 const amount = document.getElementById('input-amount').value;
 
                 if (!date || !desc || !amount) return alert("請填寫所有欄位");
+                
+                // 轉換數值，確保寫入正確
+                const numAmount = parseFloat(amount);
+                
                 const { error } = await supabaseClient.from('loan_records').insert([{
                     transaction_date: date,
                     description: desc,
-                    principal_amount: amount,
+                    principal_amount: isNaN(numAmount) ? 0 : numAmount,
                     category: 'manual'
-                }]);
+               }]);
 
                 if (error) alert("新增失敗");
                 else {
