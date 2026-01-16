@@ -2,7 +2,7 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initially-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
     <title>小數簿 Micro Ledger</title>
 
@@ -273,10 +273,10 @@
         // =========================================
         // 2. Intro 動畫控制器 (保持 Part 1 邏輯)
         // =========================================
-        const Intro = {
-            progress: 0,
+                    progress: 0,
             isDataReady: false,
             startTime: null,
+            currentIndex: -1,
             minDuration: 2500, // 2.5秒儀式感
             
             els: {
@@ -291,7 +291,10 @@
                 app: document.getElementById('app-container')
             },
 
-            showText(index) {
+                        showText(index) {
+                if (this.currentIndex === index) return;
+                this.currentIndex = index;
+
                 this.els.texts.forEach((el, i) => {
                     if (i === index) {
                         el.classList.add('active');
@@ -392,9 +395,10 @@
                     console.log("✅ Data Ready & Calculated!");
                     Intro.isDataReady = true; // 通知 Intro
 
-                } catch (err) {
-                    console.error("Engine Error:", err);
-                    alert("數據加載失敗：" + err.message);
+                                } catch (err) {
+                    console.error("Engine Error (Demo Mode):", err);
+                    // 即使 API 失敗，也允許動畫完成並進入介面
+                    Intro.isDataReady = true;
                 }
             },
 
