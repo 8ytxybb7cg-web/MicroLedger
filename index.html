@@ -495,8 +495,8 @@
                     return rate;
                 }
 
-                // 4. Fallback: 週末/假期抓不到，暫用 4.0% (或可寫邏輯往前找)
-                return 4.0; 
+                // 4. Fallback: 週末/假期抓不到，暫用 1.3% (或可寫邏輯往前找)
+                return 1.3; 
             },
 
             async fetchFromHKMA(dateStr) {
