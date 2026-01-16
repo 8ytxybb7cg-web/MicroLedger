@@ -306,9 +306,9 @@
         // =========================================
         const Intro = {
             progress: 0,
-            isDataReady: false,
+            isDataReady: false, // 數據是否算好
             startTime: null,
-            minDuration: 2500, // 2.5秒儀式感
+            minDuration: 2500, // 強制最少播 2.5 秒 (儀式感)
             
             els: {
                 layer: document.getElementById('intro-layer'),
@@ -337,38 +337,49 @@
             start() {
                 console.log("🎬 Intro Animation Started");
                 this.startTime = performance.now();
-                this.showText(0);
+                this.showText(0); // 立即顯示第一句
                 
+                // 開始 Animation Loop
                 requestAnimationFrame((t) => this.tick(t));
-                AppEngine.init(); // 啟動真實數據引擎
+                
+                // 同時開始抓數據
+                AppEngine.init(); 
             },
 
             tick(now) {
                 const elapsed = now - this.startTime;
 
-                // 0 -> 70% (1.2s)
+                // --- 進度條邏輯 ---
+                
+                                // 階段 1: 0% -> 70% (加速：約 1 秒到達)
                 if (this.progress < 70) {
-                    this.progress += 0.8; 
+                    this.progress += 1.2; 
                 }
-                // 70% -> 90% (慢)
+                // 階段 2: 70% -> 90% (調整速度：確保在 2.5s 前到達 90%，觸發等待文案)
                 else if (this.progress < 90) {
-                    this.progress += 0.2;
-                    this.showText(1);
+                    this.progress += 0.35;
+                    this.showText(1); // 切換到 "逐筆核對"
                 }
-                // 90% 停留區
+                // 階段 3: 卡在 90% (等待數據 OR 等待儀式感時間)
                 else if (this.progress >= 90) {
+                    
+                    // 判斷是否滿足解鎖條件：數據好了 AND 時間夠了
                     const timeIsEnough = elapsed > this.minDuration;
                     
                     if (this.isDataReady && timeIsEnough) {
-                        this.progress += 2.0; // 衝刺
+                        // 衝刺到 100%
+                        this.progress += 2.0; 
                     } else {
+                        // 繼續卡著，並顯示 "計算中，唔急"
                         this.progress = 90;
-                        this.showText(2); // "計算中，唔急"
+                        this.showText(2);
                     }
                 }
 
+                // 渲染
                 this.els.bar.style.width = Math.min(this.progress, 100) + '%';
 
+                // 結束檢查
                 if (this.progress >= 100) {
                     this.finish();
                 } else {
@@ -377,11 +388,11 @@
             },
 
             finish() {
-                this.showText(3);
+                this.showText(3); // 準備就緒
                 setTimeout(() => {
                     this.els.layer.classList.add('fade-out');
                     this.els.app.classList.add('visible');
-                    document.body.style.overflow = 'auto'; // 解鎖滾動
+                    document.body.style.overflow = 'auto';
                 }, 500);
             }
         };
