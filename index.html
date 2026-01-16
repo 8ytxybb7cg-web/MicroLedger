@@ -271,8 +271,18 @@
         try {
             // 使用 window.supabase 避免變數名稱衝突
             const { createClient } = window.supabase;
-            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
-            console.log("✅ Supabase initialized");
+supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+console.log("✅ Supabase initialized");
+
+// ⬇️ Anonymous Sign-In（否則 RLS 會擋 insert）
+supabaseClient.auth.signInAnonymously()
+    .then(({ error }) => {
+        if (error) {
+            console.error("❌ Anonymous auth failed:", error);
+        } else {
+            console.log("🔐 Anonymous auth success");
+        }
+    });
         } catch (e) {
             console.error("❌ Supabase init failed:", e);
             alert("系統錯誤：Supabase 無法連接");
@@ -617,7 +627,10 @@
                     category: 'manual'
                 }]);
 
-                if (error) alert("新增失敗");
+                if (error) {
+    console.error("Insert error:", error);
+    alert("新增失敗：" + error.message);
+}
                 else {
                     alert("新增成功，重新計算中...");
                     this.init(); // 重新抓取並計算
