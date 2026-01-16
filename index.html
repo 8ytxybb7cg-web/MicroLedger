@@ -270,14 +270,8 @@
         let supabaseClient;
         try {
             // 使用 window.supabase 避免變數名稱衝突
-            if (!window.supabase || !window.supabase.createClient) {
-  throw new Error('Supabase SDK not loaded');
-}
-
-supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+            const { createClient } = window.supabase;
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log("✅ Supabase initialized");
         } catch (e) {
             console.error("❌ Supabase init failed:", e);
@@ -484,23 +478,20 @@ supabaseClient = window.supabase.createClient(
             // --- 智能利率抓取 (Cache -> API) ---
             async getHiborRate(dateStr) {
                                 // 1. 查 Supabase Cache
-                const { data: cache, error } = await supabaseClient
-  .from('hibor_cache')
-  .select('rate_value')
-  .eq('rate_date', dateStr)
-  .maybeSingle();
+                const { data: cache } = await supabaseClient
+                    .from('hibor_cache')
+                    .select('rate_value')
+                    .eq('rate_date', dateStr)
+                    .single();
 
-if (!error && cache) return cache.rate_value;
+                if (cache) return cache.rate_value;
 
                 // 2. 查 HKMA API
                 const rate = await this.fetchFromHKMA(dateStr);
                 
                                 // 3. 寫入 Cache (如果抓到的話)
                 if (rate !== null) {
-                    supabaseClient
-  .from('hibor_cache')
-  .insert([{ rate_date: dateStr, rate_value: rate }])
-  .catch(() => {});
+                    supabaseClient.from('hibor_cache').insert([{ rate_date: dateStr, rate_value: rate }]).then();
                     return rate;
                 }
 
