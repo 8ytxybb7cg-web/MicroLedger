@@ -260,12 +260,10 @@
         const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
         
-                // 確保 Supabase 已載入
-        let supabaseClient;
+        let supabase;
         try {
-            // 使用 window.supabase 避免變數名稱衝突
-            const { createClient } = window.supabase;
-            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+            // 初始化 Supabase
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log("✅ Supabase initialized");
         } catch (e) {
             console.error("❌ Supabase init failed:", e);
@@ -317,14 +315,14 @@
             tick(now) {
                 const elapsed = now - this.startTime;
 
-                                // 階段 1: 0% -> 70% (加速：約 1 秒到達)
+                // 0 -> 70% (1.2s)
                 if (this.progress < 70) {
-                    this.progress += 1.2; 
+                    this.progress += 0.8; 
                 }
-                // 階段 2: 70% -> 90% (調整速度：確保在 2.5s 前到達 90%，觸發等待文案)
+                // 70% -> 90% (慢)
                 else if (this.progress < 90) {
-                    this.progress += 0.35;
-                    this.showText(1); // 切換到 "逐筆核對"
+                    this.progress += 0.2;
+                    this.showText(1);
                 }
                 // 90% 停留區
                 else if (this.progress >= 90) {
