@@ -273,30 +273,15 @@
         // =========================================
         // 2. Intro 動畫控制器 (保持 Part 1 邏輯)
         // =========================================
-                const Intro = {
+        const Intro = {
             progress: 0,
-            target: 0,   // 目標進度 (用於 Easing 動畫)
-            phase: 0,    // 0:初始(0-70), 1:核對(70-90), 2:停留(90), 3:衝刺(100)
             isDataReady: false,
-            isFinished: false,
+            startTime: null,
+            minDuration: 2500, // 2.5秒儀式感
+            
+                    els: {},
 
-            els: {
-                layer: document.getElementById('intro-layer'),
-                bar: document.getElementById('progress-bar'),
-                texts: [
-                    document.getElementById('text-1'),
-                    document.getElementById('text-2'),
-                    document.getElementById('text-3'),
-                    document.getElementById('text-4')
-                ],
-                app: document.getElementById('app-container')
-            },
-
-            // 狀態文字切換 (增加防抖，避免重複觸發)
             showText(index) {
-    if (this.currentTextIndex === index) return;
-    this.currentTextIndex = index ?? 0;
-
                 this.els.texts.forEach((el, i) => {
                     if (i === index) {
                         el.classList.add('active');
@@ -308,106 +293,63 @@
                 });
             },
 
-            start() {
-                console.log("🎬 Intro Animation Started");
-                this.showText(0); // "整理每一筆小數中"
-                
-                // 啟動動畫迴圈
-                requestAnimationFrame(() => this.tick());
-                
-                // 啟動真實數據引擎
-                AppEngine.init(); 
-            },
+                    start() {
+            // 修正：在 DOM Ready 後才抓取元素，避免在 <head> 執行時為 null
+            this.els = {
+                layer: document.getElementById('intro-layer'),
+                bar: document.getElementById('progress-bar'),
+                texts: [
+                    document.getElementById('text-1'),
+                    document.getElementById('text-2'),
+                    document.getElementById('text-3'),
+                    document.getElementById('text-4')
+                ],
+                app: document.getElementById('app-container')
+            };
 
-            tick() {
-                // --- 1. 階段邏輯 (Phase Logic) ---
-                switch (this.phase) {
-                    case 0: // 0% -> 70%
-                        this.target = 70;
-                        // 當視覺追上 65% 時，切換文案並進入下一階段
-                        if (this.progress > 65) {
-                            this.phase = 1;
-                            this.showText(1); // "逐筆核對"
-                        }
-                        break;
-                    
-                    case 1: // 70% -> 90%
-                        this.target = 90;
-                        if (this.progress > 89) {
-                            this.phase = 2; // 進入強制停留
-                            this.startHoldingPattern();
-                        }
-                        break;
-                    
-                    case 2: // 90% 停留狀態
-                        this.target = 90; // 鎖定目標
-                        this.progress = 90; // 鎖定數值
-                        break;
+            console.log("🎬 Intro Animation Started");
+            this.startTime = performance.now();
+            this.showText(0);
+            
+            requestAnimationFrame((t) => this.tick(t));
+            AppEngine.init(); // 啟動真實數據引擎
+        },
 
-                    case 3: // 90% -> 100% 衝刺
-                        this.target = 100;
-                        break;
+            tick(now) {
+                const elapsed = now - this.startTime;
+
+                // 0 -> 70% (1.2s)
+                if (this.progress < 70) {
+                    this.progress += 0.8; 
+                }
+                // 70% -> 90% (慢)
+                else if (this.progress < 90) {
+                    this.progress += 0.2;
+                    this.showText(1);
+                }
+                // 90% 停留區
+                else if (this.progress >= 90) {
+                    const timeIsEnough = elapsed > this.minDuration;
+                    
+                    if (this.isDataReady && timeIsEnough) {
+                        this.progress += 2.0; // 衝刺
+                    } else {
+                        this.progress = 90;
+                        this.showText(2); // "計算中，唔急"
+                    }
                 }
 
-                // --- 2. 動畫平滑運算 (Easing) ---
-                // 使用 (目標 - 當前) * 係數 來產生減速效果
-                let speed = (this.target - this.progress) * 0.05;
-                
-                // 確保有最小速度，避免無限趨近不動
-                if (this.phase < 3 && speed < 0.1 && speed > 0) speed = 0.1;
-                if (this.phase === 3) speed = 0.8; // 最後衝刺速度固定
+                this.els.bar.style.width = Math.min(this.progress, 100) + '%';
 
-                if (this.progress < this.target) {
-                    this.progress += speed;
-                }
-
-                // 防止溢出
-                if (this.progress > 100) this.progress = 100;
-
-                // --- 3. 更新 DOM ---
-                this.els.bar.style.width = this.progress + '%';
-
-                // 檢查是否完成
-                if (this.progress >= 99.9 && this.phase === 3) {
+                if (this.progress >= 100) {
                     this.finish();
                 } else {
-                    requestAnimationFrame(() => this.tick());
+                    requestAnimationFrame((t) => this.tick(t));
                 }
-            },
-
-            // 核心修正：獨立的停留邏輯
-            startHoldingPattern() {
-                console.log("⏳ Phase 2: Holding at 90%...");
-                this.showText(2); // "計算中，唔急"
-
-                // 建立兩個 Promise：
-                // 1. 強制等待 2.5 秒 (品牌儀式感)
-                const waitTime = new Promise(resolve => setTimeout(resolve, 2500));
-                
-                // 2. 等待數據準備好 (輪詢檢查)
-                const checkData = new Promise(resolve => {
-                    if (this.isDataReady) return resolve();
-                    const checker = setInterval(() => {
-                        if (this.isDataReady) {
-                            clearInterval(checker);
-                            resolve();
-                        }
-                    }, 100);
-                });
-
-                // 當 "時間到了" 且 "數據好了" 同時滿足，才放行
-                Promise.all([waitTime, checkData]).then(() => {
-                    console.log("🚀 Resuming to finish");
-                    this.phase = 3; // 解鎖進入衝刺階段
-                    this.showText(3); // "準備就緒"
-                });
             },
 
             finish() {
-                if (this.isFinished) return;
-                this.isFinished = true;
-                this.els.bar.style.width = '100%'; // 確保填滿
-
+                this.showText(3);
                 setTimeout(() => {
                     this.els.layer.classList.add('fade-out');
                     this.els.app.classList.add('visible');
@@ -442,15 +384,10 @@
                     this.data.loans = loans || [];
 
                     // B. 執行利滾利計算 (Real Math)
-// ⚠️ 加入 fail-safe，避免初始化被外部 API 卡死
-try {
-    await this.processAllLoans();
-} catch (e) {
-    console.warn("⚠️ processAllLoans skipped:", e);
-}
+                    await this.processAllLoans();
 
-// C. 計算總結
-this.calculateSummary();
+                    // C. 計算總結
+                    this.calculateSummary();
 
                     // D. 渲染介面
                     this.renderUI();
@@ -458,13 +395,10 @@ this.calculateSummary();
                     console.log("✅ Data Ready & Calculated!");
                     Intro.isDataReady = true; // 通知 Intro
 
-                catch (err) {
-    console.error("Engine Error:", err);
-    alert("數據加載失敗：" + err.message);
-
-    // ⚠️ 重要：避免 Intro 永久卡死
-    Intro.isDataReady = true;
-}
+                } catch (err) {
+                    console.error("Engine Error:", err);
+                    alert("數據加載失敗：" + err.message);
+                }
             },
 
             // --- 核心邏輯：逐筆計算複利 ---
