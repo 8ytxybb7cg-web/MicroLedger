@@ -2,7 +2,7 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initially-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
     <title>小數簿 Micro Ledger</title>
 
@@ -263,11 +263,7 @@
         let supabase;
         try {
             // 初始化 Supabase
-        let supabaseClient;
-        try {
-            // 使用 window.supabase 避免變數名稱衝突
-            const { createClient } = window.supabase;
-            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log("✅ Supabase initialized");
         } catch (e) {
             console.error("❌ Supabase init failed:", e);
@@ -277,12 +273,13 @@
         // =========================================
         // 2. Intro 動畫控制器 (保持 Part 1 邏輯)
         // =========================================
-                    progress: 0,
+                const Intro = {
+            progress: 0,
+            target: 0,   // 目標進度 (用於 Easing 動畫)
+            phase: 0,    // 0:初始(0-70), 1:核對(70-90), 2:停留(90), 3:衝刺(100)
             isDataReady: false,
-            startTime: null,
-            currentIndex: -1,
-            minDuration: 2500, // 2.5秒儀式感
-            
+            isFinished: false,
+
             els: {
                 layer: document.getElementById('intro-layer'),
                 bar: document.getElementById('progress-bar'),
@@ -295,9 +292,10 @@
                 app: document.getElementById('app-container')
             },
 
-                        showText(index) {
-                if (this.currentIndex === index) return;
-                this.currentIndex = index;
+            // 狀態文字切換 (增加防抖，避免重複觸發)
+            showText(index) {
+                if (this.currentTextIndex === index) return;
+                this.currentTextIndex = index;
 
                 this.els.texts.forEach((el, i) => {
                     if (i === index) {
@@ -312,48 +310,104 @@
 
             start() {
                 console.log("🎬 Intro Animation Started");
-                this.startTime = performance.now();
-                this.showText(0);
+                this.showText(0); // "整理每一筆小數中"
                 
-                requestAnimationFrame((t) => this.tick(t));
-                AppEngine.init(); // 啟動真實數據引擎
+                // 啟動動畫迴圈
+                requestAnimationFrame(() => this.tick());
+                
+                // 啟動真實數據引擎
+                AppEngine.init(); 
             },
 
-            tick(now) {
-                const elapsed = now - this.startTime;
-
-                // 0 -> 70% (1.2s)
-                if (this.progress < 70) {
-                    this.progress += 1.2; 
-                }
-                // 70% -> 90% (慢)
-                else if (this.progress < 90) {
-                    this.progress += 0.35;
-                    this.showText(1);
-                }
-                // 90% 停留區
-                else if (this.progress >= 90) {
-                    const timeIsEnough = elapsed > this.minDuration;
+            tick() {
+                // --- 1. 階段邏輯 (Phase Logic) ---
+                switch (this.phase) {
+                    case 0: // 0% -> 70%
+                        this.target = 70;
+                        // 當視覺追上 65% 時，切換文案並進入下一階段
+                        if (this.progress > 65) {
+                            this.phase = 1;
+                            this.showText(1); // "逐筆核對"
+                        }
+                        break;
                     
-                    if (this.isDataReady && timeIsEnough) {
-                        this.progress += 2.0; // 衝刺
-                    } else {
-                        this.progress = 90;
-                        this.showText(2); // "計算中，唔急"
-                    }
+                    case 1: // 70% -> 90%
+                        this.target = 90;
+                        if (this.progress > 89) {
+                            this.phase = 2; // 進入強制停留
+                            this.startHoldingPattern();
+                        }
+                        break;
+                    
+                    case 2: // 90% 停留狀態
+                        this.target = 90; // 鎖定目標
+                        this.progress = 90; // 鎖定數值
+                        break;
+
+                    case 3: // 90% -> 100% 衝刺
+                        this.target = 100;
+                        break;
                 }
 
-                this.els.bar.style.width = Math.min(this.progress, 100) + '%';
+                // --- 2. 動畫平滑運算 (Easing) ---
+                // 使用 (目標 - 當前) * 係數 來產生減速效果
+                let speed = (this.target - this.progress) * 0.05;
+                
+                // 確保有最小速度，避免無限趨近不動
+                if (this.phase < 3 && speed < 0.1 && speed > 0) speed = 0.1;
+                if (this.phase === 3) speed = 0.8; // 最後衝刺速度固定
 
-                if (this.progress >= 100) {
+                if (this.progress < this.target) {
+                    this.progress += speed;
+                }
+
+                // 防止溢出
+                if (this.progress > 100) this.progress = 100;
+
+                // --- 3. 更新 DOM ---
+                this.els.bar.style.width = this.progress + '%';
+
+                // 檢查是否完成
+                if (this.progress >= 99.9 && this.phase === 3) {
                     this.finish();
                 } else {
-                    requestAnimationFrame((t) => this.tick(t));
+                    requestAnimationFrame(() => this.tick());
                 }
+            },
+
+            // 核心修正：獨立的停留邏輯
+            startHoldingPattern() {
+                console.log("⏳ Phase 2: Holding at 90%...");
+                this.showText(2); // "計算中，唔急"
+
+                // 建立兩個 Promise：
+                // 1. 強制等待 2.5 秒 (品牌儀式感)
+                const waitTime = new Promise(resolve => setTimeout(resolve, 2500));
+                
+                // 2. 等待數據準備好 (輪詢檢查)
+                const checkData = new Promise(resolve => {
+                    if (this.isDataReady) return resolve();
+                    const checker = setInterval(() => {
+                        if (this.isDataReady) {
+                            clearInterval(checker);
+                            resolve();
+                        }
+                    }, 100);
+                });
+
+                // 當 "時間到了" 且 "數據好了" 同時滿足，才放行
+                Promise.all([waitTime, checkData]).then(() => {
+                    console.log("🚀 Resuming to finish");
+                    this.phase = 3; // 解鎖進入衝刺階段
+                    this.showText(3); // "準備就緒"
+                });
             },
 
             finish() {
-                this.showText(3);
+                if (this.isFinished) return;
+                this.isFinished = true;
+                this.els.bar.style.width = '100%'; // 確保填滿
+
                 setTimeout(() => {
                     this.els.layer.classList.add('fade-out');
                     this.els.app.classList.add('visible');
@@ -399,10 +453,9 @@
                     console.log("✅ Data Ready & Calculated!");
                     Intro.isDataReady = true; // 通知 Intro
 
-                                } catch (err) {
-                    console.error("Engine Error (Demo Mode):", err);
-                    // 即使 API 失敗，也允許動畫完成並進入介面
-                    Intro.isDataReady = true;
+                } catch (err) {
+                    console.error("Engine Error:", err);
+                    alert("數據加載失敗：" + err.message);
                 }
             },
 
