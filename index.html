@@ -378,38 +378,254 @@
         // 3. 數據引擎 (AppEngine)
         // =========================================
         const AppEngine = {
-            data: { loans: [] },
+            data: {
+                loans: [],
+                summary: { totalPrincipal: 0, totalInterest: 0, totalBalance: 0 }
+            },
+            isPrivacyMode: false,
 
-                        async init() {
-                console.log("💾 Fetching Data...");
+            // HKMA API 基礎配置
+            hkmaBaseUrl: 'https://api.hkma.gov.hk/public/market-data-and-statistics/daily-monetary-statistics/daily-figures-interbank-liquidity',
+
+            async init() {
+                console.log("💾 Fetching Data from Supabase...");
                 try {
-                    // 抓取借貸紀錄
-                    const { data: loans, error } = await supabaseClient
+                    // A. 抓取所有紀錄
+                    const { data: loans, error } = await supabase
                         .from('loan_records')
                         .select('*')
                         .order('transaction_date', { ascending: true });
-                    
-                    if (error) throw error;
-                    
-                    this.data.loans = loans || [];
-                    
-                    // 模擬複雜計算過程 (實際上這裡會放 HIBOR 運算)
-                    // 為了測試，我們先假設這裡運算很快
-                    await this.processLoans(); 
 
-                    console.log("✅ Data Ready!");
-                    Intro.isDataReady = true; // 通知 Intro 可以結束了
+                    if (error) throw error;
+                    this.data.loans = loans || [];
+
+                    // B. 執行利滾利計算 (Real Math)
+                    await this.processAllLoans();
+
+                    // C. 計算總結
+                    this.calculateSummary();
+
+                    // D. 渲染介面
+                    this.renderUI();
+
+                    console.log("✅ Data Ready & Calculated!");
+                    Intro.isDataReady = true; // 通知 Intro
 
                 } catch (err) {
-                    console.error("Data Error:", err);
-                    alert("數據載入失敗，請刷新。");
+                    console.error("Engine Error:", err);
+                    alert("數據加載失敗：" + err.message);
                 }
             },
 
-            async processLoans() {
-                // 這裡暫時模擬一個 1 秒的運算延遲
-                // 確保你測試時不會覺得是假的
-                return new Promise(resolve => setTimeout(resolve, 500));
+            // --- 核心邏輯：逐筆計算複利 ---
+            async processAllLoans() {
+                const today = new Date();
+
+                // 並行處理所有貸款計算 (Promise.all)
+                const processed = await Promise.all(this.data.loans.map(async (loan) => {
+                    let currentPrincipal = parseFloat(loan.principal_amount);
+                    let currentDate = new Date(loan.transaction_date);
+                    let history = []; // 用於 UI 展示計算路徑
+
+                    // 迴圈：直到日期追上今天
+                    while (currentDate < today) {
+                        // 1. 確定下個結算日 (下月 1 號)
+                        let nextDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+                        if (nextDate > today) nextDate = new Date(today); // 如果下月1號還沒到，就算到今天
+                        if (nextDate <= currentDate) break;
+
+                        // 2. 抓取該期利率 (HIBOR - 1%)
+                        // 規則：用 currentDate (起算日) 的 HIBOR
+                        const dateStr = currentDate.toISOString().split('T')[0];
+                        const hibor = await this.getHiborRate(dateStr);
+                        
+                        // HIBOR - 1% (最少為0)
+                        const effectiveRate = Math.max(0, hibor - 1);
+
+                        // 3. 計算天數與利息
+                        const timeDiff = nextDate - currentDate;
+                        const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                        
+                        // 利息 = 本金 * (利率/100) * (天數/365)
+                        const interest = currentPrincipal * (effectiveRate / 100) * (days / 365);
+
+                        history.push({
+                            start: dateStr,
+                            end: nextDate.toISOString().split('T')[0],
+                            hibor: hibor,
+                            rate: effectiveRate,
+                            days: days,
+                            interest: interest
+                        });
+
+                        // 4. 滾存
+                        currentPrincipal += interest;
+                        currentDate = nextDate;
+                    }
+
+                    // 將結果掛載回物件
+                    loan.calc = {
+                        currentBalance: currentPrincipal,
+                        totalInterest: currentPrincipal - parseFloat(loan.principal_amount),
+                        history: history,
+                        finalRate: history.length > 0 ? history[history.length - 1].rate : 0
+                    };
+                    return loan;
+                }));
+                this.data.loans = processed;
+            },
+
+            // --- 智能利率抓取 (Cache -> API) ---
+            async getHiborRate(dateStr) {
+                // 1. 查 Supabase Cache
+                const { data: cache } = await supabase
+                    .from('hibor_cache')
+                    .select('rate_value')
+                    .eq('rate_date', dateStr)
+                    .single();
+
+                if (cache) return cache.rate_value;
+
+                // 2. 查 HKMA API
+                const rate = await this.fetchFromHKMA(dateStr);
+                
+                // 3. 寫入 Cache (如果抓到的話)
+                if (rate !== null) {
+                    supabase.from('hibor_cache').insert([{ rate_date: dateStr, rate_value: rate }]).then();
+                    return rate;
+                }
+
+                // 4. Fallback: 週末/假期抓不到，暫用 4.0% (或可寫邏輯往前找)
+                return 4.0; 
+            },
+
+            async fetchFromHKMA(dateStr) {
+                const url = `${this.hkmaBaseUrl}?segment=hibor&date=${dateStr}`;
+                try {
+                    const res = await fetch(url);
+                    const json = await res.json();
+                    if (json.header.success && json.result.records.length > 0) {
+                        // 嘗試讀取 ir_1m (1個月 HIBOR)
+                        const rec = json.result.records[0];
+                        // HKMA 欄位可能有變，這裡做容錯
+                        return rec.ir_1m || rec.ir_1m_fixing || null;
+                    }
+                } catch (e) {
+                    console.warn(`HKMA API Fail [${dateStr}]:`, e);
+                }
+                return null;
+            },
+
+            calculateSummary() {
+                let p = 0, bal = 0;
+                this.data.loans.forEach(l => {
+                    p += parseFloat(l.principal_amount);
+                    bal += l.calc.currentBalance;
+                });
+                this.data.summary = {
+                    totalPrincipal: p,
+                    totalBalance: bal,
+                    totalInterest: bal - p
+                };
+            },
+
+            // --- UI 渲染與互動 ---
+            renderUI() {
+                const s = this.data.summary;
+                
+                // 更新頂部數字
+                this.updateNum('total-balance', s.totalBalance, true);
+                this.updateNum('total-principal', s.totalPrincipal);
+                this.updateNum('total-interest', s.totalInterest, true, true);
+
+                // 更新列表
+                const listEl = document.getElementById('loan-list');
+                listEl.innerHTML = '';
+
+                this.data.loans.forEach(loan => {
+                    const el = document.createElement('div');
+                    el.className = 'glass-card loan-item';
+                    el.onclick = () => el.classList.toggle('expanded'); // 點擊展開
+                    
+                    // 構建詳細歷史 HTML
+                    const historyHtml = loan.calc.history.map(h => `
+                        <div class="detail-row">
+                            <span>${h.start} (${h.days}日 @ ${h.rate.toFixed(2)}%)</span>
+                            <span>+$${h.interest.toFixed(2)}</span>
+                        </div>
+                    `).join('');
+
+                    el.innerHTML = `
+                        <div class="loan-main">
+                            <div class="loan-info">
+                                <h4>${loan.description}</h4>
+                                <span>${loan.transaction_date} · 本金 $${parseFloat(loan.principal_amount).toLocaleString()}</span>
+                            </div>
+                            <div class="loan-amount">
+                                <span class="mono-num current privacy-target">$${loan.calc.currentBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                <span class="mono-num original">賺 $${loan.calc.totalInterest.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="loan-details">
+                            <div style="margin-bottom:8px; font-weight:600;">計息詳情 (HIBOR-1%)</div>
+                            ${historyHtml}
+                        </div>
+                    `;
+                    listEl.appendChild(el);
+                });
+                
+                // 重新應用隱私模式
+                this.applyPrivacy();
+            },
+
+            updateNum(id, val, isCurrency = false, isPlus = false) {
+                const el = document.getElementById(id);
+                let text = val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                if (isCurrency) text = '$' + text;
+                if (isPlus && val > 0) text = '+' + text;
+                el.innerText = text;
+                // 加入 privacy class
+                if (!el.classList.contains('privacy-target')) el.classList.add('privacy-target');
+            },
+
+            // 隱身模式邏輯
+            togglePrivacy() {
+                this.isPrivacyMode = !this.isPrivacyMode;
+                this.applyPrivacy();
+            },
+
+            applyPrivacy() {
+                const targets = document.querySelectorAll('.privacy-target');
+                targets.forEach(el => {
+                    if (this.isPrivacyMode) el.classList.add('privacy-blur');
+                    else el.classList.remove('privacy-blur');
+                });
+                document.getElementById('privacy-toggle').innerText = this.isPrivacyMode ? '🚫 解除隱身' : '👁️ 隱身模式';
+            },
+
+            // 新增記錄 (簡易版)
+            async addRecord() {
+                const date = document.getElementById('input-date').value;
+                const desc = document.getElementById('input-desc').value;
+                const amount = document.getElementById('input-amount').value;
+
+                if (!date || !desc || !amount) return alert("請填寫所有欄位");
+
+                const { error } = await supabase.from('loan_records').insert([{
+                    transaction_date: date,
+                    description: desc,
+                    principal_amount: amount,
+                    category: 'manual'
+                }]);
+
+                if (error) alert("新增失敗");
+                else {
+                    alert("新增成功，重新計算中...");
+                    this.init(); // 重新抓取並計算
+                    // 清空表單
+                    document.getElementById('input-desc').value = '';
+                    document.getElementById('input-amount').value = '';
+                }
             }
         };
 
