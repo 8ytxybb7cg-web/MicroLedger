@@ -562,9 +562,6 @@
                                 <span>${loan.transaction_date} · 本金 $${parseFloat(loan.principal_amount).toLocaleString()}</span>
                             </div>
                             <div class="loan-amount">
-                            .loan-amount .profit {
-                              font-size: 11px; color: var(--success-color); font-weight: 500;
-                                  }
                                 <span class="mono-num current privacy-target">$${loan.calc.currentBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                 <span class="mono-num profit">利息 $${loan.calc.totalInterest.toFixed(2)}</span>
                             </div>
