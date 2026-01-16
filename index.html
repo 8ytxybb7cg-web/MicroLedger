@@ -417,6 +417,8 @@
         // 4. 啟動入口
         // =========================================
         window.addEventListener('load', () => {
+            // 預設填入今天的日期
+            document.getElementById('input-date').valueAsDate = new Date();
             Intro.start();
         });
 
