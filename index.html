@@ -263,7 +263,11 @@
         let supabase;
         try {
             // 初始化 Supabase
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let supabaseClient;
+        try {
+            // 使用 window.supabase 避免變數名稱衝突
+            const { createClient } = window.supabase;
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log("✅ Supabase initialized");
         } catch (e) {
             console.error("❌ Supabase init failed:", e);
