@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
-    <title>小數簿 Micro Ledger v2.0</title>
+    <title>小數簿 Micro Ledger</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,116 +15,147 @@
     <style>
         :root {
             --bg-color: #050505;
-            --accent-color: #0A84FF;
             --success-color: #30D158;
             --danger-color: #FF453A;
-            --glass-bg: rgba(255, 255, 255, 0.03);
+            --accent-color: #0A84FF;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --glass-bg: rgba(20, 20, 25, 0.7);
             --glass-border: rgba(255, 255, 255, 0.1);
-            --text-secondary: rgba(255, 255, 255, 0.5);
             --radius-md: 12px;
-            --radius-lg: 20px;
+            --radius-lg: 16px;
         }
 
         body {
             margin: 0;
             background-color: var(--bg-color);
             color: white;
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Intro時鎖定，之後解鎖 */
             height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
 
-        .mono-num { font-family: 'JetBrains+Mono', monospace; }
-
+        /* 字體與通用 */
+        .mono-num { font-family: 'JetBrains Mono', monospace; letter-spacing: -0.5px; }
+        
         /* 背景流光 */
         .ambient-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #000000 70%);
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000000 80%);
             z-index: -1;
         }
 
-        /* 隱私模式 CSS 規則 */
-        .privacy-blur { filter: blur(10px); pointer-events: none; user-select: none; }
-        .privacy-hidden { visibility: hidden; opacity: 0; height: 0; overflow: hidden; margin: 0 !important; }
-
         /* Intro 層 */
         #intro-layer {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: #000; z-index: 9999;
+            background: rgba(5, 5, 5, 0.8);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 9999;
             transition: opacity 0.8s ease;
         }
         #intro-layer.fade-out { opacity: 0; pointer-events: none; }
 
-        /* 主容器 */
+        .intro-content { width: 80%; max-width: 300px; text-align: center; }
+        .app-title { font-size: 24px; font-weight: 600; letter-spacing: 4px; margin-bottom: 40px; text-transform: uppercase; }
+
+        .status-text { font-size: 13px; color: var(--text-secondary); margin-bottom: 15px; height: 20px; transition: opacity 0.5s; }
+        .progress-track { width: 100%; height: 3px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: var(--success-color); transition: width 0.2s linear; }
+
+        /* 主介面容器 */
         #app-container {
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
-            opacity: 0;
-            transition: opacity 0.5s ease;
+            opacity: 0; transform: scale(0.98);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            padding: 20px; max-width: 600px; margin: 0 auto;
+            padding-top: 40px; padding-bottom: 120px; /* 底部留白給滾動 */
+            height: 100vh; overflow-y: auto; box-sizing: border-box;
         }
-        #app-container.visible { opacity: 1; }
+        #app-container.visible { opacity: 1; transform: scale(1); }
 
-        .header { text-align: center; padding: 40px 0 20px; }
-        .header h2 { font-size: 48px; margin: 0; font-weight: 700; letter-spacing: -2px; }
-        .hibor-tag { 
-            font-size: 12px; color: var(--text-secondary); 
-            background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 20px;
-        }
-
-        .glass-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        /* 操作欄 */
-        .action-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .tab-btn {
-            background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
-            color: white; padding: 10px; border-radius: var(--radius-md); cursor: pointer;
-        }
-        .tab-btn.active { background: var(--accent-color); border-color: var(--accent-color); }
-
-        .input-group { display: flex; flex-direction: column; gap: 10px; }
-        input {
+        /* Header */
+        .header { text-align: center; margin-bottom: 30px; }
+        #total-balance { font-size: 40px; font-weight: 700; margin: 0; letter-spacing: -1px; }
+        .header-desc { color: var(--text-secondary); font-size: 13px; margin-top: 5px; }
+        
+        /* 隱身模式按鈕 */
+        #privacy-toggle {
             background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border);
-            padding: 14px; border-radius: var(--radius-md); color: white; outline: none; font-size: 16px;
+            color: var(--text-secondary); padding: 6px 14px; border-radius: 20px;
+            font-size: 12px; margin-top: 15px; cursor: pointer; transition: 0.3s;
         }
-        .submit-btn {
-            padding: 14px; border-radius: var(--radius-md); border: none; font-weight: 600; cursor: pointer;
-            background: var(--accent-color); color: white; margin-top: 5px;
+        #privacy-toggle:hover { background: rgba(255,255,255,0.15); color: white; }
+        #privacy-toggle.active { background: rgba(255,255,255,0.2); color: white; border-color: white; }
+
+        /* 統計卡片 */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        .glass-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg); padding: 16px;
         }
-        .submit-btn.repay { background: var(--success-color); }
+        .stat-card label { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card span { font-size: 18px; font-weight: 600; display: block; }
+        
+        /* 新增項目表單 */
+        .entry-section h3 { margin: 0 0 15px 0; font-size: 15px; font-weight: 500; }
+        .entry-form { display: flex; flex-direction: column; gap: 10px; }
+        .form-row { display: flex; gap: 10px; }
+        .entry-form input, .entry-form select {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            padding: 12px; border-radius: var(--radius-md); color: white;
+            outline: none; font-family: inherit; font-size: 14px; width: 100%; box-sizing: border-box;
+        }
+        .entry-form select { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 10px center; background-size: 14px; }
+        .entry-form button {
+            background: white; color: black; border: none; padding: 12px;
+            border-radius: var(--radius-md); font-weight: 600; cursor: pointer; margin-top: 5px;
+            transition: transform 0.1s;
+        }
+        .entry-form button:active { transform: scale(0.98); }
 
         /* 列表 */
-        .loan-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);
+        .list-header { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; padding-left: 5px; margin-top: 30px; display: flex; justify-content: space-between; }
+        .loan-item { margin-bottom: 10px; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        
+        /* 結清樣式 */
+        .loan-item.settled { opacity: 0.5; order: 99; filter: grayscale(0.8); }
+        .loan-item.settled .loan-amount .current { text-decoration: line-through; color: var(--text-secondary); }
+        .loan-item.settled::after {
+            content: "SETTLED"; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-10deg);
+            border: 2px solid rgba(255,255,255,0.3); padding: 5px 10px;
+            font-size: 20px; font-weight: 700; color: rgba(255,255,255,0.3);
+            pointer-events: none;
         }
-        .loan-item:last-child { border-bottom: none; }
-        .loan-info h4 { margin: 0; font-size: 16px; }
-        .loan-info span { font-size: 11px; color: var(--text-secondary); }
-        .loan-val { text-align: right; }
-        .loan-val .curr { display: block; font-weight: 600; font-size: 17px; }
-        .loan-val .interest { font-size: 11px; color: var(--success-color); }
 
-        .privacy-toggle {
-            position: fixed; bottom: 30px; right: 20px;
-            background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border);
-            backdrop-filter: blur(10px); color: white; width: 50px; height: 50px;
-            border-radius: 25px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; z-index: 100;
+        .loan-main { display: flex; justify-content: space-between; align-items: flex-start; cursor: pointer; }
+        .loan-info h4 { margin: 0; font-size: 15px; font-weight: 500; color: white; }
+        .loan-info span { font-size: 12px; color: var(--text-secondary); display: block; margin-top: 4px; }
+        
+        .loan-amount { text-align: right; }
+        .loan-amount .current { display: block; font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+        .loan-amount .interest-badge { font-size: 11px; color: var(--success-color); background: rgba(48, 209, 88, 0.1); padding: 2px 6px; border-radius: 4px; }
+        
+        /* 詳情展開 */
+        .loan-details {
+            max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+            font-size: 12px; color: var(--text-secondary);
+            border-top: 1px solid rgba(255,255,255,0.05); margin-top: 0;
         }
+        .loan-item.expanded .loan-details { max-height: 300px; margin-top: 12px; padding-top: 12px; }
+        .detail-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+
+        /* === 隱身模式特效 === */
+        body.privacy-active .privacy-target {
+            filter: blur(6px);
+            opacity: 0.5;
+            user-select: none;
+            transition: filter 0.3s ease;
+        }
+        /* 特別處理：隱藏 Header 描述中的利率文字 */
+        body.privacy-active .header-desc span { display: none; }
+        /* 取代文字 */
+        body.privacy-active .header-desc::after { content: "****"; opacity: 0.5; }
+
     </style>
 </head>
 <body>
@@ -132,187 +163,395 @@
     <div class="ambient-bg"></div>
 
     <div id="intro-layer">
-        <div style="font-size: 20px; letter-spacing: 5px; color: white;">MICRO LEDGER</div>
-        <div style="width: 200px; height: 2px; background: rgba(255,255,255,0.1); margin-top: 20px; border-radius: 2px; overflow: hidden;">
-            <div id="loading-bar" style="width: 0%; height: 100%; background: var(--accent-color); transition: width 0.3s;"></div>
+        <div class="intro-content">
+            <div class="app-title">小數簿</div>
+            <div class="status-text" id="status-text">初始化系統...</div>
+            <div class="progress-track">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
         </div>
     </div>
 
     <div id="app-container">
         <header class="header">
             <h2 class="mono-num privacy-target" id="total-balance">$0.00</h2>
-            <div class="hibor-tag privacy-hide-item">HIBOR - 1% 滾存中</div>
+            <p class="header-desc">
+                當前總結欠 <span class="privacy-sensitive">(HIBOR - 1% 滾存)</span>
+            </p>
+            <button id="privacy-toggle" onclick="App.togglePrivacy()">👁️ 隱身模式</button>
         </header>
 
-        <section class="glass-card">
-            <div class="action-tabs">
-                <button class="tab-btn active" onclick="UI.setTab('loan')">新增欠款</button>
-                <button class="tab-btn" onclick="UI.setTab('repay')">還款錄入</button>
+        <div class="stats-grid">
+            <div class="glass-card stat-card">
+                <label>尚欠本金</label>
+                <span class="mono-num privacy-target" id="total-principal">$0.00</span>
             </div>
-
-            <div id="form-loan" class="input-group">
-                <input type="text" id="loan-desc" placeholder="用途 (如：車費)" class="privacy-hide-desc">
-                <input type="number" id="loan-amt" placeholder="欠款金額 (HKD)">
-                <input type="date" id="loan-date">
-                <button class="submit-btn" onclick="Engine.addLoan()">記錄欠款</button>
+            <div class="glass-card stat-card">
+                <label>總利息累計</label>
+                <span class="mono-num privacy-target" style="color: var(--success-color)" id="total-interest">+$0.00</span>
             </div>
+        </div>
 
-            <div id="form-repay" class="input-group" style="display: none;">
-                <input type="number" id="repay-amt" placeholder="還款金額 (HKD)">
-                <input type="date" id="repay-date">
-                <p style="font-size: 11px; color: var(--text-secondary); margin: 0;">* 系統將自動由最舊紀錄開始扣除</p>
-                <button class="submit-btn repay" onclick="Engine.processRepayment()">確認還款</button>
+        <section class="glass-card entry-section">
+            <h3>新增記錄</h3>
+            <div class="entry-form">
+                <div class="form-row">
+                    <select id="input-type" onchange="App.toggleInputStyle()">
+                        <option value="loan">📥 借入 (Loan)</option>
+                        <option value="repay">📤 還款 (Repay)</option>
+                    </select>
+                    <input type="date" id="input-date">
+                </div>
+                <input type="text" id="input-desc" placeholder="用途 / 備註">
+                <input type="number" id="input-amount" placeholder="金額 (HKD)" step="0.01">
+                <button onclick="App.addRecord()">確認記錄</button>
             </div>
         </section>
 
-        <div id="records-list" class="glass-card" style="padding: 0;">
-            </div>
+        <div class="list-header">
+            <span>欠款明細 (由舊至新)</span>
+            <span id="repayment-pool-display" style="color: var(--accent-color)"></span>
+        </div>
+        <section id="loan-list">
+            </section>
     </div>
 
-    <button class="privacy-toggle" onclick="UI.togglePrivacy()">👁️</button>
-
     <script>
-        // --- 初始化 Supabase ---
+        // =========================================
+        // 1. 設定與工具
+        // =========================================
         const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
+        const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi'; // 注意：這是公開 Key，後端需設 RLS
+        
+        // 確保 Supabase
         const { createClient } = window.supabase;
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const Engine = {
-            loans: [],
+        // =========================================
+        // 2. 應用程式核心 (App)
+        // =========================================
+        const App = {
+            data: {
+                loans: [],
+                repayments: [],
+                totalRepaymentPool: 0
+            },
             isPrivacy: false,
+            hkmaCache: {}, // 簡單的 Runtime Cache
 
             async init() {
-                this.updateLoading(30);
-                await this.fetchData();
-                this.updateLoading(100);
-                setTimeout(() => {
-                    document.getElementById('intro-layer').classList.add('fade-out');
-                    document.getElementById('app-container').classList.add('visible');
-                }, 500);
+                this.updateStatus("連接資料庫...", 20);
+                
+                try {
+                    // 1. 匿名登入 (確保 RLS 允許讀寫)
+                    await supabase.auth.signInAnonymously();
+
+                    // 2. 平行抓取資料
+                    this.updateStatus("同步交易記錄...", 40);
+                    const [loansRes, repaysRes] = await Promise.all([
+                        supabase.from('loan_records').select('*').order('transaction_date', { ascending: true }),
+                        supabase.from('repayment_records').select('*').order('transaction_date', { ascending: true })
+                    ]);
+
+                    if (loansRes.error) throw loansRes.error;
+                    
+                    // 還款記錄表如果不存在，可能報錯，這裡做容錯處理
+                    this.data.loans = loansRes.data || [];
+                    this.data.repayments = repaysRes.data || []; // 如果還款表未建，這會是空陣列或需要 catch
+
+                    // 3. 計算核心邏輯
+                    this.updateStatus("計算複利與 HIBOR...", 60);
+                    await this.calculateAll();
+
+                    // 4. 完成
+                    this.updateStatus("準備就緒", 100);
+                    setTimeout(() => {
+                        document.getElementById('intro-layer').classList.add('fade-out');
+                        document.getElementById('app-container').classList.add('visible');
+                        document.body.style.overflow = 'auto';
+                        this.renderUI();
+                    }, 500);
+
+                } catch (e) {
+                    console.error(e);
+                    alert("系統錯誤: " + e.message);
+                }
             },
 
-            updateLoading(p) { document.getElementById('loading-bar').style.width = p + '%'; },
-
-            async fetchData() {
-                // 獲取原始欠款紀錄 (按日期升序：舊到新)
-                const { data } = await supabase.from('loan_records').select('*').order('transaction_date', { ascending: true });
-                this.loans = data || [];
-                this.calculateInterest();
-                this.render();
+            updateStatus(text, percent) {
+                document.getElementById('status-text').innerText = text;
+                document.getElementById('progress-bar').style.width = percent + '%';
             },
 
-            // 利息計算 (簡化版 HIBOR 邏輯：暫設固定年化 3.5% 作為演示，實作可對接 HKMA API)
-            calculateInterest() {
-                const now = new Date();
-                let total = 0;
-                this.loans.forEach(loan => {
-                    const start = new Date(loan.transaction_date);
-                    const days = Math.floor((now - start) / (1000 * 60 * 60 * 24));
-                    const rate = 0.035; // 假設 HIBOR-1% 約為 3.5%
-                    const interest = loan.principal_amount * rate * (days / 365);
-                    loan.currentTotal = parseFloat(loan.principal_amount) + interest;
-                    loan.accruedInterest = interest;
-                    total += loan.currentTotal;
+            // --- 核心計算 (包含 FIFO 還款) ---
+            async calculateAll() {
+                const today = new Date();
+
+                // 1. 先計算每筆借款截至今日的「本利和」 (尚未扣除還款)
+                // 這裡必須等待所有 HIBOR 抓取完畢
+                const loanPromises = this.data.loans.map(async (loan) => {
+                    let principal = parseFloat(loan.principal_amount);
+                    let currentDate = new Date(loan.transaction_date);
+                    let history = [];
+                    let originalPrincipal = principal;
+
+                    // 滾利計算迴圈
+                    while (currentDate < today) {
+                        // 下個月1號
+                        let nextDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+                        if (nextDate > today) nextDate = new Date(today);
+                        if (nextDate <= currentDate) break;
+
+                        // 抓取利率 (優化：快取)
+                        const dateStr = currentDate.toISOString().split('T')[0];
+                        const hibor = await this.getHibor(dateStr);
+                        const rate = Math.max(0, hibor - 1); // HIBOR - 1%
+                        
+                        const days = Math.ceil((nextDate - currentDate) / (1000 * 60 * 60 * 24));
+                        const interest = principal * (rate / 100) * (days / 365);
+
+                        history.push({ start: dateStr, days, rate, interest });
+                        principal += interest;
+                        currentDate = nextDate;
+                    }
+
+                    // 暫存計算結果
+                    loan.calc = {
+                        grossBalance: principal, // 尚未扣還款的餘額
+                        accruedInterest: principal - originalPrincipal,
+                        history: history,
+                        isSettled: false,
+                        finalBalance: principal // 之後會被還款扣減
+                    };
+                    return loan;
                 });
-                this.totalBalance = total;
-            },
 
-            async addLoan() {
-                const desc = document.getElementById('loan-desc').value;
-                const amt = document.getElementById('loan-amt').value;
-                const date = document.getElementById('loan-date').value;
-                if(!amt || !date) return alert('請填寫完整');
+                await Promise.all(loanPromises);
 
-                await supabase.from('loan_records').insert([{ 
-                    description: desc, 
-                    principal_amount: parseFloat(amt), 
-                    transaction_date: date 
-                }]);
-                location.reload();
-            },
+                // 2. 計算總還款池 (Repayment Pool)
+                let totalRepayment = this.data.repayments.reduce((sum, r) => sum + parseFloat(r.amount), 0);
+                this.data.totalRepaymentPool = totalRepayment;
 
-            // --- 核心邏輯：從最舊紀錄開始還款 ---
-            async processRepayment() {
-                let amount = parseFloat(document.getElementById('repay-amt').value);
-                const date = document.getElementById('repay-date').value;
-                if(!amount || amount <= 0) return alert('金額無效');
-
-                // 排序：確保從最舊開始 (FIFO)
-                const sortedLoans = [...this.loans].sort((a,b) => new Date(a.transaction_date) - new Date(b.transaction_date));
-
-                for (let loan of sortedLoans) {
-                    if (amount <= 0) break;
-
-                    let debt = loan.principal_amount; // 以本金為準進行抵扣
-                    if (amount >= debt) {
-                        // 全額清還該筆
-                        amount -= debt;
-                        await supabase.from('loan_records').delete().eq('id', loan.id);
+                // 3. FIFO 還款邏輯 (由舊至新扣除)
+                // Loans 已經是依照日期 Ascending 排序
+                for (let loan of this.data.loans) {
+                    if (totalRepayment <= 0) {
+                        // 還款池已乾，這筆全額欠款
+                        loan.calc.finalBalance = loan.calc.grossBalance;
+                        loan.calc.isSettled = false;
+                    } else if (totalRepayment >= loan.calc.grossBalance) {
+                        // 還款池夠還這筆
+                        totalRepayment -= loan.calc.grossBalance;
+                        loan.calc.finalBalance = 0;
+                        loan.calc.isSettled = true;
                     } else {
-                        // 部分還款，更新該筆本金
-                        const newBal = debt - amount;
-                        amount = 0;
-                        await supabase.from('loan_records').update({ principal_amount: newBal }).eq('id', loan.id);
+                        // 還款池只夠還部分
+                        loan.calc.finalBalance = loan.calc.grossBalance - totalRepayment;
+                        totalRepayment = 0;
+                        loan.calc.isSettled = false;
                     }
                 }
-                alert('還款處理完成');
-                location.reload();
             },
 
-            render() {
-                document.getElementById('total-balance').innerText = '$' + this.totalBalance.toLocaleString(undefined, {minimumFractionDigits:2});
+            // --- 獲取 HIBOR ---
+            async getHibor(dateStr) {
+                if (this.hkmaCache[dateStr]) return this.hkmaCache[dateStr];
                 
-                const list = document.getElementById('records-list');
-                list.innerHTML = this.loans.map(loan => `
-                    <div class="loan-item">
-                        <div class="loan-info">
-                            <h4 class="privacy-hide-desc">${loan.description || '無描述'}</h4>
-                            <span>起算日: ${loan.transaction_date}</span>
-                        </div>
-                        <div class="loan-val">
-                            <span class="mono-num curr privacy-target">$${loan.currentTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
-                            <span class="interest privacy-hide-int">+ $${loan.accruedInterest.toFixed(2)}</span>
-                        </div>
-                    </div>
-                `).join('');
-                
-                UI.applyPrivacyUI();
-            }
-        };
+                // 優先查 Supabase Cache
+                const { data } = await supabase.from('hibor_cache').select('rate_value').eq('rate_date', dateStr).single();
+                if (data) {
+                    this.hkmaCache[dateStr] = data.rate_value;
+                    return data.rate_value;
+                }
 
-        const UI = {
-            setTab(type) {
-                document.getElementById('form-loan').style.display = type === 'loan' ? 'flex' : 'none';
-                document.getElementById('form-repay').style.display = type === 'repay' ? 'flex' : 'none';
-                document.querySelectorAll('.tab-btn').forEach((b, i) => {
-                    b.classList.toggle('active', (i === 0 && type === 'loan') || (i === 1 && type === 'repay'));
+                // 查 HKMA API
+                try {
+                    const url = `https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-daily?segment=hibor.fixing&date=${dateStr}`;
+                    const res = await fetch(url);
+                    const json = await res.json();
+                    if (json.header.success && json.result.records.length > 0) {
+                        const val = json.result.records[0].ir_1m || 4.0; // Default fallback
+                        // 寫入 Supabase Cache (Fire and forget)
+                        supabase.from('hibor_cache').insert([{ rate_date: dateStr, rate_value: val }]).then();
+                        this.hkmaCache[dateStr] = val;
+                        return val;
+                    }
+                } catch(e) {}
+                
+                return 4.0; // 最終 fallback
+            },
+
+            // --- UI 渲染 ---
+            renderUI() {
+                const listEl = document.getElementById('loan-list');
+                listEl.innerHTML = '';
+
+                let totalBal = 0;
+                let totalPrin = 0;
+                let totalInt = 0;
+
+                // 渲染貸款列表
+                this.data.loans.forEach(loan => {
+                    const c = loan.calc;
+                    
+                    // 只有未結清的才算入總顯視數 (或者根據需求顯示全部)
+                    // 這裡邏輯：總欠款 = sum(finalBalance)
+                    if (!c.isSettled) {
+                        totalBal += c.finalBalance;
+                        // 注意：如果部分還款，這裡的本金顯示邏輯比較複雜。
+                        // 簡單起見：尚欠本金 = 總欠款 - 當前剩餘利息佔比? 
+                        // 為簡化，這裡 Stats 只顯示「原始未還本金」比較難算，
+                        // 改為：
+                        // 總結欠 = 所有 Final Balance 加總
+                        // 總利息 = 所有 Loan 的 Accrued Interest (如果已還清，利息也算已付)
+                        // 但這樣 stat 會怪怪的。
+                        // 修正 Stats 邏輯：只統計「Outstanding」的部分
+                    }
+
+                    // 構建卡片
+                    const el = document.createElement('div');
+                    el.className = `glass-card loan-item ${c.isSettled ? 'settled' : ''}`;
+                    el.onclick = () => { if(!c.isSettled) el.classList.toggle('expanded'); };
+
+                    const amtDisplay = c.isSettled ? 
+                        `已還清 <span style="font-size:11px">(${parseFloat(loan.principal_amount).toLocaleString()})</span>` : 
+                        `$${c.finalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                    // 隱身模式 class
+                    const privacyClass = 'privacy-target';
+                    const descClass = 'privacy-target';
+
+                    el.innerHTML = `
+                        <div class="loan-main">
+                            <div class="loan-info">
+                                <h4 class="${descClass}">${loan.description}</h4>
+                                <span>${loan.transaction_date} · 原始本金 $${parseFloat(loan.principal_amount).toLocaleString()}</span>
+                            </div>
+                            <div class="loan-amount">
+                                <span class="mono-num current ${privacyClass}">${amtDisplay}</span>
+                                <span class="interest-badge ${privacyClass} profit">累計息 $${c.accruedInterest.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="loan-details">
+                            <div style="margin-bottom:8px; font-weight:600;">計息詳情 (HIBOR-1%)</div>
+                            ${c.history.map(h => `
+                                <div class="detail-row">
+                                    <span>${h.start} (${h.days}日 @ ${h.rate.toFixed(2)}%)</span>
+                                    <span>+$${h.interest.toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    listEl.appendChild(el);
                 });
+
+                // 更新頂部總數
+                // 由於 FIFO 邏輯，總結欠就是 sum(finalBalance)
+                document.getElementById('total-balance').innerText = '$' + totalBal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                // 為了顯示合理，這裡簡單估算：
+                // 尚欠本金 = 總欠款 (totalBal) 減去 這些欠款中包含的利息?
+                // 這很難精確拆分，因為還款是先扣舊的。
+                // 這裡改為顯示：原始總借入 - 總還款 (如果 <0 則 0)
+                const totalBorrowed = this.data.loans.reduce((s, l) => s + parseFloat(l.principal_amount), 0);
+                const currentPrincipalEst = Math.max(0, totalBorrowed - this.data.totalRepaymentPool); // 粗略估計剩餘本金
+                
+                document.getElementById('total-principal').innerText = '$' + currentPrincipalEst.toLocaleString(undefined, {minimumFractionDigits: 2});
+                
+                // 總利息 = 總結欠 - 剩餘本金
+                const totalPendingInterest = Math.max(0, totalBal - currentPrincipalEst);
+                document.getElementById('total-interest').innerText = '+' + totalPendingInterest.toLocaleString(undefined, {minimumFractionDigits: 2});
+                
+                // 顯示總還款池狀況
+                if (this.data.totalRepaymentPool > 0) {
+                     document.getElementById('repayment-pool-display').innerText = `已還款總額: $${this.data.totalRepaymentPool.toLocaleString()}`;
+                }
+
+                this.applyPrivacy();
             },
 
+            // --- 互動功能 ---
             togglePrivacy() {
-                Engine.isPrivacy = !Engine.isPrivacy;
-                this.applyPrivacyUI();
+                this.isPrivacy = !this.isPrivacy;
+                const btn = document.getElementById('privacy-toggle');
+                
+                if (this.isPrivacy) {
+                    document.body.classList.add('privacy-active');
+                    btn.classList.add('active');
+                    btn.innerText = '🚫 解除隱身';
+                } else {
+                    document.body.classList.remove('privacy-active');
+                    btn.classList.remove('active');
+                    btn.innerText = '👁️ 隱身模式';
+                }
+            },
+            
+            applyPrivacy() {
+                // 由 CSS body class 統一控制，無需 JS 逐個 loop
             },
 
-            applyPrivacyUI() {
-                const isP = Engine.isPrivacy;
-                // 1. 金額模糊
-                document.querySelectorAll('.privacy-target').forEach(el => el.classList.toggle('privacy-blur', isP));
-                // 2. 描述隱藏
-                document.querySelectorAll('.privacy-hide-desc').forEach(el => el.classList.toggle('privacy-hidden', isP));
-                // 3. 利息與滾存標籤隱藏
-                document.querySelectorAll('.privacy-hide-int, .privacy-hide-item').forEach(el => el.classList.toggle('privacy-hidden', isP));
+            toggleInputStyle() {
+                const type = document.getElementById('input-type').value;
+                const btn = document.querySelector('.entry-form button');
+                if (type === 'repay') {
+                    btn.style.backgroundColor = '#0A84FF'; // Blue
+                    btn.style.color = 'white';
+                    btn.innerText = "＋ 記錄還款";
+                    document.getElementById('input-desc').placeholder = "還款來源 (選填)";
+                } else {
+                    btn.style.backgroundColor = 'white';
+                    btn.style.color = 'black';
+                    btn.innerText = "＋ 記錄欠款";
+                    document.getElementById('input-desc').placeholder = "用途 / 備註";
+                }
+            },
+
+            async addRecord() {
+                const type = document.getElementById('input-type').value;
+                const date = document.getElementById('input-date').value;
+                const desc = document.getElementById('input-desc').value;
+                const amount = document.getElementById('input-amount').value;
+
+                if (!date || !amount) return alert("請填寫日期與金額");
+
+                this.updateStatus("寫入中...", 80);
+                document.getElementById('intro-layer').classList.remove('fade-out'); // Show loading
+
+                let table = type === 'repay' ? 'repayment_records' : 'loan_records';
+                
+                const { error } = await supabase.from(table).insert([{
+                    transaction_date: date,
+                    description: desc || (type === 'repay' ? '還款' : '未命名'),
+                    amount: amount, // 注意還款表欄位名稱需一致，若為 principal_amount 需修改
+                    principal_amount: amount // 兼容寫法，視你的DB結構而定
+                }]);
+
+                // 若欄位名稱不同 (loan用 principal_amount, repay用 amount)，需分開寫：
+                /*
+                let payload = { transaction_date: date, description: desc };
+                if (type === 'repay') payload.amount = amount;
+                else payload.principal_amount = amount;
+                const { error } = await supabase.from(table).insert([payload]);
+                */
+
+                if (error) {
+                    alert("錯誤: " + error.message);
+                    document.getElementById('intro-layer').classList.add('fade-out');
+                } else {
+                    // 清空並重整
+                    document.getElementById('input-desc').value = '';
+                    document.getElementById('input-amount').value = '';
+                    await this.init(); // 重新計算
+                }
             }
         };
 
         // 啟動
         window.onload = () => {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('loan-date').value = today;
-            document.getElementById('repay-date').value = today;
-            Engine.init();
+            document.getElementById('input-date').valueAsDate = new Date();
+            App.init();
         };
+
     </script>
 </body>
 </html>
