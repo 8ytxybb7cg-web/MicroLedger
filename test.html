@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小數簿 Micro Ledger</title>
+    <title>小數簿 Micro Ledger Pro</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -16,110 +16,60 @@
             --accent-color: #0A84FF;
             --success-color: #30D158;
             --repay-color: #FF9F0A;
+            --danger-color: #FF453A;
             --text-secondary: rgba(255, 255, 255, 0.6);
             --radius-lg: 16px;
             --radius-md: 8px;
         }
 
-        body {
-            margin: 0; background: var(--bg-color); color: white;
-            font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden;
-        }
-
+        body { margin: 0; background: var(--bg-color); color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
         .mono-num { font-family: 'JetBrains Mono', monospace; }
+        .ambient-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000000 80%); z-index: -1; }
 
-        /* 背景流光 */
-        .ambient-bg {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000000 80%);
-            z-index: -1;
-        }
-
-        /* Intro 載入層 */
-        #intro-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: rgba(5, 5, 5, 0.95); z-index: 9999; transition: opacity 0.8s ease;
-        }
+        /* Intro Layer */
+        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5, 5, 5, 0.98); z-index: 9999; transition: opacity 0.8s ease; }
         .intro-content { width: 80%; max-width: 300px; text-align: center; }
-        .app-title { font-size: 24px; font-weight: 600; letter-spacing: 4px; margin-bottom: 50px; text-transform: uppercase; }
-        
-        .status-text-container { height: 30px; margin-bottom: 15px; position: relative; }
-        .status-text {
-            font-size: 14px; color: var(--text-secondary); position: absolute;
-            width: 100%; left: 0; opacity: 0; transform: translateY(10px); transition: all 0.5s ease;
-        }
-        .status-text.active { opacity: 1; transform: translateY(0); }
-        .status-text.exit { opacity: 0; transform: translateY(-10px); }
-
-        .progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+        .progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 20px; }
         .progress-bar { height: 100%; width: 0%; background: var(--success-color); transition: width 0.1s linear; }
 
-        /* 主容器 */
-        #app-container {
-            opacity: 0; transform: scale(0.98); transition: 0.8s;
-            padding: 20px; max-width: 600px; margin: 0 auto;
-            height: 100vh; overflow-y: auto; box-sizing: border-box; padding-bottom: 100px;
-        }
+        /* App Container */
+        #app-container { opacity: 0; transform: scale(0.98); transition: 0.8s; padding: 20px; max-width: 600px; margin: 0 auto; height: 100vh; overflow-y: auto; box-sizing: border-box; padding-bottom: 120px; }
         #app-container.visible { opacity: 1; transform: scale(1); }
 
-        /* Header */
-        .header { text-align: center; margin-bottom: 30px; padding-top: 20px; }
-        #total-balance { font-size: 42px; font-weight: 700; margin: 0; }
-        .header p { color: var(--text-secondary); font-size: 13px; margin-top: 8px; }
+        /* Privacy */
+        .privacy-blur { filter: blur(12px); pointer-events: none; user-select: none; opacity: 0.2; }
+        #privacy-toggle { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; margin-top: 15px; cursor: pointer; }
 
-        /* 隱身模式按鈕 */
-        #privacy-toggle {
-            background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border);
-            color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px;
-            margin-top: 15px; cursor: pointer;
-        }
-        .privacy-blur { filter: blur(10px); pointer-events: none; user-select: none; opacity: 0.3; }
-
-        /* 統計卡片 */
-        .glass-card {
-            background: var(--glass-bg); border: 1px solid var(--glass-border);
-            border-radius: var(--radius-lg); padding: 18px; margin-bottom: 15px;
-        }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
-        .stat-card label { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
-        .stat-card span { font-size: 18px; font-weight: 600; }
-
-        /* 列表項目 */
-        #loan-list { margin-top: 20px; }
-        .loan-item { cursor: pointer; transition: background 0.2s; position: relative; margin-bottom: 12px; }
-        .loan-item.settled { opacity: 0.4; }
+        /* Cards & Lists */
+        .glass-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 15px; }
+        .loan-item { position: relative; margin-bottom: 12px; padding: 15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); transition: 0.2s; cursor: pointer; }
+        .loan-item:active { background: rgba(255,255,255,0.05); }
+        .item-repay { border-left: 4px solid var(--repay-color); }
         .loan-main { display: flex; justify-content: space-between; align-items: flex-start; }
-        .loan-info h4 { margin: 0 0 4px 0; font-size: 15px; font-weight: 500; }
+        .loan-info h4 { margin: 0 0 4px 0; font-size: 15px; }
         .loan-info span { font-size: 12px; color: var(--text-secondary); }
         .loan-amount { text-align: right; }
-        .loan-amount .current { display: block; font-weight: 600; font-size: 15px; }
-        .loan-amount .profit { font-size: 11px; color: var(--success-color); }
-        .loan-amount .settled-tag { font-size: 10px; color: var(--text-secondary); border: 1px solid var(--glass-border); padding: 2px 6px; border-radius: 4px; }
+        .profit { font-size: 11px; color: var(--success-color); display: block; }
+        .settled-tag { font-size: 10px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; }
 
-        /* 展開細節 */
-        .loan-details {
-            max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0, 1, 0, 1);
-            font-size: 12px; color: var(--text-secondary);
-        }
-        .loan-item.expanded .loan-details { max-height: 1000px; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
-        .detail-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; }
+        /* Action Menu (Edit/Delete) */
+        .action-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; z-index: 10000; justify-content: center; align-items: flex-end; }
+        .action-sheet { background: #1c1c1e; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s ease; }
+        .action-sheet.show { transform: translateY(0); }
+        .action-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; margin-bottom: 10px; cursor: pointer; }
+        .btn-edit { background: var(--accent-color); color: white; }
+        .btn-delete { background: var(--danger-color); color: white; }
+        .btn-cancel { background: #3a3a3c; color: white; }
 
-        /* 表單 */
-        .entry-section h3 { margin: 0 0 15px 0; font-size: 15px; display: flex; justify-content: space-between; }
-        .type-switcher { display: flex; gap: 10px; }
-        .type-btn { font-size: 12px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--glass-border); cursor: pointer; color: var(--text-secondary); }
-        .type-btn.active { border-color: white; color: white; background: rgba(255,255,255,0.1); }
-        .entry-form { display: flex; flex-direction: column; gap: 10px; }
-        .entry-form input {
-            background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
-            padding: 12px; border-radius: var(--radius-md); color: white; font-family: inherit;
-        }
-        .entry-form button {
-            background: white; color: black; border: none; padding: 12px;
-            border-radius: var(--radius-md); font-weight: 700; cursor: pointer; transition: 0.3s;
-        }
-        .entry-form button.repay-mode { background: var(--repay-color); color: white; }
+        /* Form Controls */
+        .type-switcher { display: flex; gap: 8px; margin-bottom: 15px; }
+        .type-btn { flex: 1; padding: 10px; text-align: center; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 13px; cursor: pointer; color: var(--text-secondary); }
+        .type-btn.active { background: white; color: black; border-color: white; font-weight: 600; }
+        .entry-form input { background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; }
+        .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; background: white; color: black; }
+        
+        .loan-details { max-height: 0; overflow: hidden; transition: 0.3s; font-size: 12px; color: var(--text-secondary); border-top: 0px solid rgba(255,255,255,0.1); margin-top: 0; }
+        .loan-item.expanded .loan-details { max-height: 500px; margin-top: 12px; padding-top: 12px; border-top-width: 1px; }
     </style>
 </head>
 <body>
@@ -128,54 +78,53 @@
 
     <div id="intro-layer">
         <div class="intro-content">
-            <div class="app-title">小數簿</div>
-            <div class="status-text-container">
-                <div class="status-text" id="text-1">整理每一筆小數中</div>
-                <div class="status-text" id="text-2">正在分析還款記錄</div>
-                <div class="status-text" id="text-3">計算 HIBOR 滾存，唔急</div>
-                <div class="status-text" id="text-4">準備就緒</div>
-            </div>
-            <div class="progress-track">
-                <div class="progress-bar" id="progress-bar"></div>
-            </div>
+            <h2 style="letter-spacing:4px">小數簿</h2>
+            <div id="status-msg" style="font-size:13px; color:var(--text-secondary)">正在讀取雲端數據...</div>
+            <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
         </div>
     </div>
 
     <div id="app-container">
-        <header class="header">
+        <header style="text-align:center; margin-bottom:30px">
             <h2 class="mono-num privacy-target" id="total-balance">$0.00</h2>
-            <p class="privacy-target">當前總結欠 (HIBOR - 1% 滾存)</p>
+            <p class="privacy-target" style="font-size:13px; color:var(--text-secondary); margin:8px 0">當前總結欠 (HIBOR - 1% 滾存)</p>
             <button id="privacy-toggle" onclick="App.togglePrivacy()">👁️ 隱身模式</button>
         </header>
 
-        <div class="stats-grid">
-            <div class="glass-card stat-card">
-                <label>原始本金</label>
-                <span class="mono-num privacy-target" id="total-principal">$0.00</span>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px">
+            <div class="glass-card" style="margin-bottom:0; padding:15px">
+                <label style="font-size:11px; color:var(--text-secondary)">原始本金</label>
+                <div class="mono-num privacy-target" id="total-principal" style="font-weight:600">$0.00</div>
             </div>
-            <div class="glass-card stat-card">
-                <label>累計產生利息</label>
-                <span class="mono-num privacy-target" id="total-interest" style="color: var(--success-color)">+$0.00</span>
+            <div class="glass-card" style="margin-bottom:0; padding:15px">
+                <label style="font-size:11px; color:var(--text-secondary)">累計利息</label>
+                <div class="mono-num privacy-target" id="total-interest" style="font-weight:600; color:var(--success-color)">+$0.00</div>
             </div>
         </div>
 
-        <section class="glass-card entry-section">
-            <h3>
-                <span>新增項目</span>
-                <div class="type-switcher">
-                    <div class="type-btn active" id="mode-loan" onclick="App.setMode('loan')">借款</div>
-                    <div class="type-btn" id="mode-repay" onclick="App.setMode('repay')">還款</div>
-                </div>
-            </h3>
+        <section class="glass-card">
+            <div class="type-switcher">
+                <div class="type-btn active" id="tab-loan" onclick="App.setMode('loan')">借款入帳</div>
+                <div class="type-btn" id="tab-repay" onclick="App.setMode('repay')">還款記錄</div>
+            </div>
             <div class="entry-form">
                 <input type="date" id="in-date">
-                <input type="text" id="in-desc" placeholder="用途 (如：車費)">
+                <input type="text" id="in-desc" placeholder="用途描述">
                 <input type="number" id="in-amt" placeholder="金額 (HKD)" step="0.01">
-                <button id="submit-btn" onclick="App.submit()">確認記錄</button>
+                <button class="submit-btn" id="btn-submit" onclick="App.submit()">確認記錄</button>
             </div>
         </section>
 
-        <div id="loan-list"></div>
+        <div id="main-list"></div>
+    </div>
+
+    <div class="action-overlay" id="action-overlay" onclick="App.closeActions()">
+        <div class="action-sheet" id="action-sheet" onclick="event.stopPropagation()">
+            <div id="selected-info" style="margin-bottom:20px; font-size:14px; color:var(--text-secondary)"></div>
+            <button class="action-btn btn-edit" onclick="App.editItem()">編輯此項目</button>
+            <button class="action-btn btn-delete" onclick="App.deleteItem()">刪除記錄</button>
+            <button class="action-btn btn-cancel" onclick="App.closeActions()">取消</button>
+        </div>
     </div>
 
     <script>
@@ -185,10 +134,8 @@
         const App = {
             sb: null,
             isPrivacyMode: false,
-            isDataReady: false,
-            currentMode: 'loan', // loan or repay
-            progress: 0,
-            startTime: null,
+            currentMode: 'loan',
+            selectedItem: null,
             data: { loans: [], repays: [], hiborCache: {} },
 
             async init() {
@@ -197,178 +144,194 @@
                 this.startIntro();
 
                 try {
-                    const [loanRes, repayRes, cacheRes] = await Promise.all([
-                        this.sb.from('loan_records').select('*').order('transaction_date', { ascending: true }),
-                        this.sb.from('repayment_records').select('*').order('transaction_date', { ascending: true }),
+                    const [l, r, c] = await Promise.all([
+                        this.sb.from('loan_records').select('*').order('transaction_date', {ascending: true}),
+                        this.sb.from('repayment_records').select('*').order('transaction_date', {ascending: true}),
                         this.sb.from('hibor_cache').select('*')
                     ]);
-
-                    cacheRes.data?.forEach(r => this.data.hiborCache[r.rate_date] = r.rate_value);
-                    this.data.loans = loanRes.data || [];
-                    this.data.repays = repayRes.data || [];
-
-                    await this.processCalculation();
-                    this.isDataReady = true;
-                } catch (e) {
-                    console.error(e);
-                }
+                    c.data?.forEach(x => this.data.hiborCache[x.rate_date] = x.rate_value);
+                    this.data.loans = l.data || [];
+                    this.data.repays = r.data || [];
+                    await this.calculate();
+                    this.finishIntro();
+                } catch (e) { alert("同步失敗: " + e.message); }
             },
 
             startIntro() {
-                this.startTime = performance.now();
-                const tick = (now) => {
-                    const elapsed = now - this.startTime;
-                    if (this.progress < 70) this.progress += 0.8;
-                    else if (this.progress < 90) this.progress += 0.2;
-                    else if (this.isDataReady && elapsed > 2500) this.progress += 2;
-
-                    this.updateStatusText(this.progress < 30 ? 0 : this.progress < 60 ? 1 : this.progress < 90 ? 2 : 3);
-                    document.getElementById('progress-bar').style.width = Math.min(this.progress, 100) + '%';
-
-                    if (this.progress >= 100) setTimeout(() => this.showApp(), 500);
-                    else requestAnimationFrame(tick);
-                };
-                requestAnimationFrame(tick);
+                let p = 0;
+                const timer = setInterval(() => {
+                    p += Math.random() * 5;
+                    document.getElementById('progress-bar').style.width = Math.min(p, 90) + '%';
+                    if (p > 90) clearInterval(timer);
+                }, 100);
             },
 
-            updateStatusText(index) {
-                for(let i=1; i<=4; i++) {
-                    const el = document.getElementById(`text-${i}`);
-                    el.className = `status-text ${i===index+1 ? 'active' : (el.classList.contains('active') ? 'exit' : '')}`;
-                }
-            },
-
-            showApp() {
-                document.getElementById('intro-layer').style.opacity = '0';
+            finishIntro() {
+                document.getElementById('progress-bar').style.width = '100%';
                 setTimeout(() => {
-                    document.getElementById('intro-layer').remove();
+                    document.getElementById('intro-layer').style.opacity = 0;
                     document.getElementById('app-container').classList.add('visible');
-                    document.body.style.overflow = 'auto';
                     this.render();
-                }, 800);
+                    setTimeout(() => document.getElementById('intro-layer').remove(), 800);
+                }, 500);
             },
 
-            async processCalculation() {
+            async calculate() {
                 const today = new Date();
-                
-                // 1. 計算每一筆貸款的滾存利息
                 for (let loan of this.data.loans) {
-                    let principal = parseFloat(loan.principal_amount);
-                    let curDate = new Date(loan.transaction_date);
-                    let history = [];
-
-                    while (curDate < today) {
-                        let nextDate = new Date(curDate.getFullYear(), curDate.getMonth() + 1, 1);
-                        if (nextDate > today) nextDate = new Date(today);
-                        if (nextDate <= curDate) break;
-
-                        const dateStr = curDate.toISOString().split('T')[0];
-                        const hibor = await this.getHibor(dateStr);
-                        const rate = Math.max(0, hibor - 1);
-                        const days = Math.ceil((nextDate - curDate) / (1000 * 60 * 60 * 24));
-                        const interest = principal * (rate / 100) * (days / 365);
-
-                        history.push({ d: dateStr, days, rate, amt: interest });
-                        principal += interest;
-                        curDate = nextDate;
+                    let prin = parseFloat(loan.principal_amount);
+                    let d = new Date(loan.transaction_date);
+                    let hist = [];
+                    while (d < today) {
+                        let next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+                        if (next > today) next = new Date(today);
+                        if (next <= d) break;
+                        const ds = d.toISOString().split('T')[0];
+                        const h = await this.getHibor(ds);
+                        const r = Math.max(0, h - 1);
+                        const days = Math.ceil((next - d) / 86400000);
+                        const interest = prin * (r / 100) * (days / 365);
+                        hist.push({ ds, days, r, amt: interest });
+                        prin += interest;
+                        d = next;
                     }
-                    loan.computedBalance = principal;
-                    loan.totalInterest = principal - parseFloat(loan.principal_amount);
-                    loan.history = history;
+                    loan.compBal = prin;
+                    loan.totalInt = prin - parseFloat(loan.principal_amount);
+                    loan.hist = hist;
                 }
 
-                // 2. FIFO 還款抵銷邏輯
-                let totalRepaidPool = this.data.repays.reduce((sum, r) => sum + parseFloat(r.amount), 0);
-                this.data.totalRepaid = totalRepaidPool;
-
-                for (let loan of this.data.loans) {
-                    if (totalRepaidPool <= 0) {
-                        loan.finalBalance = loan.computedBalance;
-                        loan.isSettled = false;
-                    } else if (totalRepaidPool >= loan.computedBalance) {
-                        totalRepaidPool -= loan.computedBalance;
-                        loan.finalBalance = 0;
-                        loan.isSettled = true;
-                    } else {
-                        loan.finalBalance = loan.computedBalance - totalRepaidPool;
-                        totalRepaidPool = 0;
-                        loan.isSettled = false;
-                    }
-                }
+                let pool = this.data.repays.reduce((s, x) => s + parseFloat(x.amount), 0);
+                this.data.loans.forEach(loan => {
+                    if (pool <= 0) { loan.rem = loan.compBal; loan.isDone = false; }
+                    else if (pool >= loan.compBal) { pool -= loan.compBal; loan.rem = 0; loan.isDone = true; }
+                    else { loan.rem = loan.compBal - pool; pool = 0; loan.isDone = false; }
+                });
             },
 
-            async getHibor(dateStr) {
-                if (this.data.hiborCache[dateStr]) return this.data.hiborCache[dateStr];
+            async getHibor(ds) {
+                if (this.data.hiborCache[ds]) return this.data.hiborCache[ds];
                 try {
-                    const res = await fetch(`https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-daily?segment=hibor.fixing&date=${dateStr}`);
-                    const json = await res.json();
-                    const val = json.result?.records[0]?.ir_1m || 4.0;
-                    this.data.hiborCache[dateStr] = val;
-                    this.sb.from('hibor_cache').insert({rate_date: dateStr, rate_value: val}).then();
-                    return val;
-                } catch(e) { return 4.0; }
+                    const res = await fetch(`https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-daily?segment=hibor.fixing&date=${ds}`);
+                    const j = await res.json();
+                    const v = j.result?.records[0]?.ir_1m || 4.0;
+                    this.data.hiborCache[ds] = v;
+                    this.sb.from('hibor_cache').insert({rate_date: ds, rate_value: v}).then();
+                    return v;
+                } catch { return 4.0; }
             },
 
-            setMode(mode) {
-                this.currentMode = mode;
-                document.getElementById('mode-loan').className = `type-btn ${mode==='loan'?'active':''}`;
-                document.getElementById('mode-repay').className = `type-btn ${mode==='repay'?'active':''}`;
-                document.getElementById('in-desc').placeholder = mode==='loan' ? "用途 (如：車費)" : "還款備註";
-                const btn = document.getElementById('submit-btn');
-                btn.innerText = mode==='loan' ? "確認記錄" : "確認還款";
-                btn.className = mode==='repay' ? 'repay-mode' : '';
+            setMode(m) {
+                this.currentMode = m;
+                document.getElementById('tab-loan').className = `type-btn ${m==='loan'?'active':''}`;
+                document.getElementById('tab-repay').className = `type-btn ${m==='repay'?'active':''}`;
+                document.getElementById('in-desc').placeholder = m==='loan' ? '用途描述' : '還款來源/備註';
+                document.getElementById('btn-submit').innerText = m==='loan' ? '確認借款入帳' : '確認還款記錄';
             },
 
             render() {
-                const list = document.getElementById('loan-list');
+                const list = document.getElementById('main-list');
                 list.innerHTML = '';
-                let tBal = 0, tPrin = 0, tInt = 0;
+                let tb=0, tp=0, ti=0;
 
-                this.data.loans.forEach(loan => {
-                    tBal += loan.finalBalance;
-                    if (!loan.isSettled) {
-                        // 粗略估算未償還本金/利息比例
-                        const ratio = loan.finalBalance / loan.computedBalance;
-                        tPrin += parseFloat(loan.principal_amount) * ratio;
-                        tInt += loan.totalInterest * ratio;
+                // 合併借款與還款，按日期排序
+                const allItems = [
+                    ...this.data.loans.map(x => ({...x, type: 'loan'})),
+                    ...this.data.repays.map(x => ({...x, type: 'repay'}))
+                ].sort((a,b) => new Date(b.transaction_date) - new Date(a.transaction_date));
+
+                allItems.forEach(item => {
+                    const el = document.createElement('div');
+                    const isLoan = item.type === 'loan';
+                    el.className = `loan-item ${isLoan ? '' : 'item-repay'} ${item.isDone ? 'settled' : ''}`;
+                    
+                    if (isLoan) {
+                        tb += item.rem;
+                        const ratio = item.rem / item.compBal;
+                        tp += parseFloat(item.principal_amount) * ratio;
+                        ti += item.totalInt * ratio;
+
+                        el.innerHTML = `
+                            <div class="loan-main" onclick="this.parentElement.classList.toggle('expanded')">
+                                <div class="loan-info">
+                                    <h4 class="privacy-target">${item.description}</h4>
+                                    <span class="privacy-target">${item.transaction_date} · 本金 $${parseFloat(item.principal_amount).toFixed(2)}</span>
+                                </div>
+                                <div class="loan-amount">
+                                    ${item.isDone ? '<span class="settled-tag">已清還</span>' : `
+                                        <span class="mono-num privacy-target" style="font-weight:600">$${item.rem.toFixed(2)}</span>
+                                        <span class="profit privacy-target">+$${item.totalInt.toFixed(2)}</span>
+                                    `}
+                                </div>
+                            </div>
+                            <div class="loan-details">
+                                ${item.hist.map(h => `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                                    <span>${h.ds} (${h.days}日 @ ${h.r.toFixed(2)}%)</span>
+                                    <span class="privacy-target">+$${h.amt.toFixed(2)}</span>
+                                </div>`).join('')}
+                            </div>
+                        `;
+                    } else {
+                        el.innerHTML = `
+                            <div class="loan-main">
+                                <div class="loan-info">
+                                    <h4 style="color:var(--repay-color)">還款項目</h4>
+                                    <span class="privacy-target">${item.transaction_date} · ${item.description}</span>
+                                </div>
+                                <div class="loan-amount">
+                                    <span class="mono-num privacy-target" style="color:var(--repay-color); font-weight:600">-$${parseFloat(item.amount).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        `;
                     }
 
-                    const el = document.createElement('div');
-                    el.className = `glass-card loan-item ${loan.isSettled ? 'settled' : ''}`;
-                    el.onclick = () => el.classList.toggle('expanded');
-                    
-                    const historyHtml = loan.history.map(h => `
-                        <div class="detail-row">
-                            <span>${h.d} (${h.days}日 @ ${h.rate.toFixed(2)}%)</span>
-                            <span class="privacy-target">+$${h.amt.toFixed(2)}</span>
-                        </div>
-                    `).join('');
+                    // 長按或按住觸發選單
+                    el.oncontextmenu = (e) => { e.preventDefault(); this.showActions(item); };
+                    // 移動端雙擊或增加一個小按鈕亦可，這裡用簡單的點擊判斷
+                    el.addEventListener('dblclick', () => this.showActions(item));
 
-                    el.innerHTML = `
-                        <div class="loan-main">
-                            <div class="loan-info">
-                                <h4 class="privacy-target">${loan.description}</h4>
-                                <span>${loan.transaction_date} · 本金 $${parseFloat(loan.principal_amount).toFixed(2)}</span>
-                            </div>
-                            <div class="loan-amount">
-                                ${loan.isSettled ? '<span class="settled-tag">已清還</span>' : `
-                                    <span class="mono-num current privacy-target">$${loan.finalBalance.toFixed(2)}</span>
-                                    <span class="profit privacy-target">+$${loan.totalInterest.toFixed(2)}</span>
-                                `}
-                            </div>
-                        </div>
-                        <div class="loan-details">
-                            <div style="margin-bottom:8px; font-weight:600;">計息詳情 (HIBOR-1%)</div>
-                            ${historyHtml || '<div style="opacity:0.5">當日清還</div>'}
-                        </div>
-                    `;
                     list.appendChild(el);
                 });
 
-                document.getElementById('total-balance').innerText = '$' + tBal.toLocaleString(undefined, {minimumFractionDigits: 2});
-                document.getElementById('total-principal').innerText = '$' + tPrin.toLocaleString(undefined, {minimumFractionDigits: 2});
-                document.getElementById('total-interest').innerText = '+$' + tInt.toLocaleString(undefined, {minimumFractionDigits: 2});
+                document.getElementById('total-balance').innerText = '$' + tb.toLocaleString(undefined,{minimumFractionDigits:2});
+                document.getElementById('total-principal').innerText = '$' + tp.toLocaleString(undefined,{minimumFractionDigits:2});
+                document.getElementById('total-interest').innerText = '+$' + ti.toLocaleString(undefined,{minimumFractionDigits:2});
                 this.applyPrivacy();
+            },
+
+            showActions(item) {
+                this.selectedItem = item;
+                document.getElementById('selected-info').innerText = `${item.transaction_date} | ${item.description}`;
+                document.getElementById('action-overlay').style.display = 'flex';
+                setTimeout(() => document.getElementById('action-sheet').classList.add('show'), 10);
+            },
+
+            closeActions() {
+                document.getElementById('action-sheet').classList.remove('show');
+                setTimeout(() => document.getElementById('action-overlay').style.display = 'none', 300);
+            },
+
+            async deleteItem() {
+                if (!confirm("確定要刪除這筆記錄嗎？此動作無法撤銷。")) return;
+                const table = this.selectedItem.type === 'loan' ? 'loan_records' : 'repayment_records';
+                const { error } = await this.sb.from(table).delete().eq('id', this.selectedItem.id);
+                if (error) alert(error.message);
+                else location.reload();
+            },
+
+            async editItem() {
+                const newAmt = prompt("修改金額:", this.selectedItem.type === 'loan' ? this.selectedItem.principal_amount : this.selectedItem.amount);
+                if (newAmt === null) return;
+                const newDesc = prompt("修改描述:", this.selectedItem.description);
+                if (newDesc === null) return;
+
+                const table = this.selectedItem.type === 'loan' ? 'loan_records' : 'repayment_records';
+                const payload = { description: newDesc };
+                if (this.selectedItem.type === 'loan') payload.principal_amount = newAmt;
+                else payload.amount = newAmt;
+
+                const { error } = await this.sb.from(table).update(payload).eq('id', this.selectedItem.id);
+                if (error) alert(error.message);
+                else location.reload();
             },
 
             togglePrivacy() {
@@ -377,8 +340,7 @@
             },
 
             applyPrivacy() {
-                const targets = document.querySelectorAll('.privacy-target');
-                targets.forEach(el => {
+                document.querySelectorAll('.privacy-target').forEach(el => {
                     if (this.isPrivacyMode) el.classList.add('privacy-blur');
                     else el.classList.remove('privacy-blur');
                 });
@@ -389,7 +351,7 @@
                 const date = document.getElementById('in-date').value;
                 const desc = document.getElementById('in-desc').value;
                 const amt = document.getElementById('in-amt').value;
-                if (!date || !amt) return alert("請填寫日期與金額");
+                if (!date || !amt) return alert("請填寫完整");
 
                 const table = this.currentMode === 'loan' ? 'loan_records' : 'repayment_records';
                 const payload = { transaction_date: date, description: desc || '未分類' };
