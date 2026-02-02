@@ -11,7 +11,7 @@
     <style>
         :root {
             --bg-color: #050505;
-            --glass-bg: rgba(20, 20, 25, 0.8);
+            --glass-bg: rgba(20, 20, 25, 0.9);
             --glass-border: rgba(255, 255, 255, 0.1);
             --accent-color: #0A84FF;
             --success-color: #30D158;
@@ -22,18 +22,36 @@
             --radius-md: 8px;
         }
 
-        body { margin: 0; background: var(--bg-color); color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+        body { margin: 0; background: var(--bg-color); color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .mono-num { font-family: 'JetBrains Mono', monospace; }
         .ambient-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000000 80%); z-index: -1; }
 
         /* Intro Layer */
-        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5, 5, 5, 0.98); z-index: 9999; transition: opacity 0.8s ease; }
+        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5, 5, 5, 1); z-index: 9999; transition: opacity 0.8s ease; }
         .intro-content { width: 80%; max-width: 300px; text-align: center; }
         .progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 20px; }
         .progress-bar { height: 100%; width: 0%; background: var(--success-color); transition: width 0.1s linear; }
 
-        /* App Container */
-        #app-container { opacity: 0; transform: scale(0.98); transition: 0.8s; padding: 20px; max-width: 600px; margin: 0 auto; height: 100vh; overflow-y: auto; box-sizing: border-box; padding-bottom: 120px; }
+        /* 固定 Header 修正 */
+        .sticky-header {
+            padding: 40px 20px 20px;
+            background: linear-gradient(to bottom, var(--bg-color) 80%, transparent);
+            z-index: 100;
+            text-align: center;
+        }
+
+        /* 滾動內容區 */
+        #app-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 120px;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            opacity: 0; transform: scale(0.98); transition: 0.8s;
+            -webkit-overflow-scrolling: touch; /* 流暢滾動 */
+        }
         #app-container.visible { opacity: 1; transform: scale(1); }
 
         /* Privacy */
@@ -41,35 +59,36 @@
         #privacy-toggle { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; margin-top: 15px; cursor: pointer; }
 
         /* Cards & Lists */
-        .glass-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 15px; }
-        .loan-item { position: relative; margin-bottom: 12px; padding: 15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); transition: 0.2s; cursor: pointer; }
-        .loan-item:active { background: rgba(255,255,255,0.05); }
+        .glass-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 15px; backdrop-filter: blur(10px); }
+        .loan-item { position: relative; margin-bottom: 12px; padding: 15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); transition: 0.2s; cursor: pointer; background: rgba(255,255,255,0.02); }
+        .loan-item:active { background: rgba(255,255,255,0.08); }
         .item-repay { border-left: 4px solid var(--repay-color); }
         .loan-main { display: flex; justify-content: space-between; align-items: flex-start; }
         .loan-info h4 { margin: 0 0 4px 0; font-size: 15px; }
-        .loan-info span { font-size: 12px; color: var(--text-secondary); }
+        .loan-info span { font-size: 12px; color: var(--text-secondary); display: block; }
         .loan-amount { text-align: right; }
         .profit { font-size: 11px; color: var(--success-color); display: block; }
-        .settled-tag { font-size: 10px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; }
+        .settled-tag { font-size: 10px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; color: var(--text-secondary); }
 
-        /* Action Menu (Edit/Delete) */
-        .action-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; z-index: 10000; justify-content: center; align-items: flex-end; }
-        .action-sheet { background: #1c1c1e; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s ease; }
+        /* Action Menu */
+        .action-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 10000; justify-content: center; align-items: flex-end; }
+        .action-sheet { background: #1c1c1e; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px 20px 40px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .action-sheet.show { transform: translateY(0); }
-        .action-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; margin-bottom: 10px; cursor: pointer; }
+        .action-btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; margin-bottom: 12px; cursor: pointer; }
         .btn-edit { background: var(--accent-color); color: white; }
         .btn-delete { background: var(--danger-color); color: white; }
-        .btn-cancel { background: #3a3a3c; color: white; }
+        .btn-cancel { background: #3a3a3c; color: white; margin-bottom: 0; }
 
         /* Form Controls */
         .type-switcher { display: flex; gap: 8px; margin-bottom: 15px; }
-        .type-btn { flex: 1; padding: 10px; text-align: center; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 13px; cursor: pointer; color: var(--text-secondary); }
+        .type-btn { flex: 1; padding: 10px; text-align: center; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 13px; cursor: pointer; color: var(--text-secondary); transition: 0.2s; }
         .type-btn.active { background: white; color: black; border-color: white; font-weight: 600; }
-        .entry-form input { background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; }
-        .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; background: white; color: black; }
+        .entry-form input { background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; font-size: 16px; }
+        .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; background: white; color: black; transition: 0.2s; }
+        .submit-btn:active { opacity: 0.8; transform: scale(0.98); }
         
-        .loan-details { max-height: 0; overflow: hidden; transition: 0.3s; font-size: 12px; color: var(--text-secondary); border-top: 0px solid rgba(255,255,255,0.1); margin-top: 0; }
-        .loan-item.expanded .loan-details { max-height: 500px; margin-top: 12px; padding-top: 12px; border-top-width: 1px; }
+        .loan-details { max-height: 0; overflow: hidden; transition: 0.3s ease-out; font-size: 12px; color: var(--text-secondary); border-top: 0px solid rgba(255,255,255,0.1); }
+        .loan-item.expanded .loan-details { max-height: 1000px; margin-top: 12px; padding-top: 12px; border-top-width: 1px; }
     </style>
 </head>
 <body>
@@ -84,13 +103,13 @@
         </div>
     </div>
 
-    <div id="app-container">
-        <header style="text-align:center; margin-bottom:30px">
-            <h2 class="mono-num privacy-target" id="total-balance">$0.00</h2>
-            <p class="privacy-target" style="font-size:13px; color:var(--text-secondary); margin:8px 0">當前總結欠 (HIBOR - 1% 滾存)</p>
-            <button id="privacy-toggle" onclick="App.togglePrivacy()">👁️ 隱身模式</button>
-        </header>
+    <div class="sticky-header">
+        <h2 class="mono-num privacy-target" id="total-balance">$0.00</h2>
+        <p class="privacy-target" style="font-size:13px; color:var(--text-secondary); margin:8px 0">當前總結欠 (HIBOR - 1% 滾存)</p>
+        <button id="privacy-toggle" onclick="App.togglePrivacy()">👁️ 隱身模式</button>
+    </div>
 
+    <div id="app-container">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px">
             <div class="glass-card" style="margin-bottom:0; padding:15px">
                 <label style="font-size:11px; color:var(--text-secondary)">原始本金</label>
@@ -120,7 +139,7 @@
 
     <div class="action-overlay" id="action-overlay" onclick="App.closeActions()">
         <div class="action-sheet" id="action-sheet" onclick="event.stopPropagation()">
-            <div id="selected-info" style="margin-bottom:20px; font-size:14px; color:var(--text-secondary)"></div>
+            <div id="selected-info" style="margin-bottom:20px; font-size:14px; color:var(--text-secondary); line-height:1.5"></div>
             <button class="action-btn btn-edit" onclick="App.editItem()">編輯此項目</button>
             <button class="action-btn btn-delete" onclick="App.deleteItem()">刪除記錄</button>
             <button class="action-btn btn-cancel" onclick="App.closeActions()">取消</button>
@@ -160,7 +179,7 @@
             startIntro() {
                 let p = 0;
                 const timer = setInterval(() => {
-                    p += Math.random() * 5;
+                    p += Math.random() * 8;
                     document.getElementById('progress-bar').style.width = Math.min(p, 90) + '%';
                     if (p > 90) clearInterval(timer);
                 }, 100);
@@ -233,7 +252,6 @@
                 list.innerHTML = '';
                 let tb=0, tp=0, ti=0;
 
-                // 合併借款與還款，按日期排序
                 const allItems = [
                     ...this.data.loans.map(x => ({...x, type: 'loan'})),
                     ...this.data.repays.map(x => ({...x, type: 'repay'}))
@@ -246,7 +264,7 @@
                     
                     if (isLoan) {
                         tb += item.rem;
-                        const ratio = item.rem / item.compBal;
+                        const ratio = item.compBal > 0 ? (item.rem / item.compBal) : 0;
                         tp += parseFloat(item.principal_amount) * ratio;
                         ti += item.totalInt * ratio;
 
@@ -272,9 +290,9 @@
                         `;
                     } else {
                         el.innerHTML = `
-                            <div class="loan-main">
+                            <div class="loan-main" onclick="App.showActions(${JSON.stringify(item).replace(/"/g, '&quot;')})">
                                 <div class="loan-info">
-                                    <h4 style="color:var(--repay-color)">還款項目</h4>
+                                    <h4 style="color:var(--repay-color)">還款記錄</h4>
                                     <span class="privacy-target">${item.transaction_date} · ${item.description}</span>
                                 </div>
                                 <div class="loan-amount">
@@ -284,23 +302,22 @@
                         `;
                     }
 
-                    // 長按或按住觸發選單
-                    el.oncontextmenu = (e) => { e.preventDefault(); this.showActions(item); };
-                    // 移動端雙擊或增加一個小按鈕亦可，這裡用簡單的點擊判斷
-                    el.addEventListener('dblclick', () => this.showActions(item));
-
+                    if (isLoan) {
+                        el.oncontextmenu = (e) => { e.preventDefault(); this.showActions(item); };
+                    }
                     list.appendChild(el);
                 });
 
-                document.getElementById('total-balance').innerText = '$' + tb.toLocaleString(undefined,{minimumFractionDigits:2});
-                document.getElementById('total-principal').innerText = '$' + tp.toLocaleString(undefined,{minimumFractionDigits:2});
-                document.getElementById('total-interest').innerText = '+$' + ti.toLocaleString(undefined,{minimumFractionDigits:2});
+                document.getElementById('total-balance').innerText = '$' + tb.toFixed(2);
+                document.getElementById('total-principal').innerText = '$' + tp.toFixed(2);
+                document.getElementById('total-interest').innerText = '+$' + ti.toFixed(2);
                 this.applyPrivacy();
             },
 
             showActions(item) {
                 this.selectedItem = item;
-                document.getElementById('selected-info').innerText = `${item.transaction_date} | ${item.description}`;
+                const amt = item.type === 'loan' ? item.principal_amount : item.amount;
+                document.getElementById('selected-info').innerHTML = `<strong>${item.type === 'loan' ? '借款' : '還款'}</strong><br>${item.transaction_date}<br>${item.description}<br>金額: $${parseFloat(amt).toFixed(2)}`;
                 document.getElementById('action-overlay').style.display = 'flex';
                 setTimeout(() => document.getElementById('action-sheet').classList.add('show'), 10);
             },
@@ -311,7 +328,7 @@
             },
 
             async deleteItem() {
-                if (!confirm("確定要刪除這筆記錄嗎？此動作無法撤銷。")) return;
+                if (!confirm("確定要刪除這筆記錄嗎？")) return;
                 const table = this.selectedItem.type === 'loan' ? 'loan_records' : 'repayment_records';
                 const { error } = await this.sb.from(table).delete().eq('id', this.selectedItem.id);
                 if (error) alert(error.message);
@@ -319,15 +336,17 @@
             },
 
             async editItem() {
-                const newAmt = prompt("修改金額:", this.selectedItem.type === 'loan' ? this.selectedItem.principal_amount : this.selectedItem.amount);
-                if (newAmt === null) return;
+                const oldAmt = this.selectedItem.type === 'loan' ? this.selectedItem.principal_amount : this.selectedItem.amount;
+                const newAmt = prompt("修改金額:", parseFloat(oldAmt).toFixed(2));
+                if (newAmt === null || isNaN(newAmt)) return;
+                
                 const newDesc = prompt("修改描述:", this.selectedItem.description);
                 if (newDesc === null) return;
 
                 const table = this.selectedItem.type === 'loan' ? 'loan_records' : 'repayment_records';
                 const payload = { description: newDesc };
-                if (this.selectedItem.type === 'loan') payload.principal_amount = newAmt;
-                else payload.amount = newAmt;
+                if (this.selectedItem.type === 'loan') payload.principal_amount = parseFloat(newAmt).toFixed(2);
+                else payload.amount = parseFloat(newAmt).toFixed(2);
 
                 const { error } = await this.sb.from(table).update(payload).eq('id', this.selectedItem.id);
                 if (error) alert(error.message);
@@ -351,12 +370,14 @@
                 const date = document.getElementById('in-date').value;
                 const desc = document.getElementById('in-desc').value;
                 const amt = document.getElementById('in-amt').value;
-                if (!date || !amt) return alert("請填寫完整");
+                if (!date || !amt || isNaN(amt)) return alert("請填寫正確金額");
 
                 const table = this.currentMode === 'loan' ? 'loan_records' : 'repayment_records';
                 const payload = { transaction_date: date, description: desc || '未分類' };
-                if (this.currentMode === 'loan') payload.principal_amount = amt;
-                else payload.amount = amt;
+                const formattedAmt = parseFloat(amt).toFixed(2);
+
+                if (this.currentMode === 'loan') payload.principal_amount = formattedAmt;
+                else payload.amount = formattedAmt;
 
                 const { error } = await this.sb.from(table).insert([payload]);
                 if (error) alert(error.message);
