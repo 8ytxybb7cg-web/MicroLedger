@@ -117,11 +117,18 @@
 
     <div class="ambient-bg"></div>
 
-    <div id="intro-layer" class="active">
+    <div id="intro-layer">
         <div class="intro-content">
-            <h2 style="letter-spacing:4px">小數簿</h2>
-            <div id="status-msg" style="font-size:13px; color:var(--text-secondary)">正在讀取雲端數據...</div>
-            <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+            <div class="app-title">小數簿</div>
+            <div class="status-text-container">
+                <div class="status-text" id="text-1">整理每一筆小數中</div>
+                <div class="status-text" id="text-2">逐筆核對，請稍候</div>
+                <div class="status-text" id="text-3">計算中，唔急</div>
+                <div class="status-text" id="text-4">準備就緒</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
         </div>
     </div>
 
