@@ -27,17 +27,21 @@
         .ambient-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000000 80%); z-index: -1; }
 
         /* Intro Layer */
-        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5, 5, 5, 1); z-index: 9999; transition: opacity 0.8s ease; }
+        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5, 5, 5, 1); z-index: 9999; transition: opacity 0.8s ease; pointer-events: none; }
+        #intro-layer.active { pointer-events: all; }
         .intro-content { width: 80%; max-width: 300px; text-align: center; }
         .progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 20px; }
         .progress-bar { height: 100%; width: 0%; background: var(--success-color); transition: width 0.1s linear; }
 
-        /* 固定 Header 修正 */
+        /* 固定 Header */
         .sticky-header {
+            position: sticky; /* 關鍵修正：改為 sticky */
+            top: 0;
             padding: 40px 20px 20px;
-            background: linear-gradient(to bottom, var(--bg-color) 80%, transparent);
+            background: linear-gradient(to bottom, var(--bg-color) 85%, transparent);
             z-index: 100;
             text-align: center;
+            flex-shrink: 0; /* 防止被壓縮 */
         }
 
         /* 滾動內容區 */
@@ -49,8 +53,8 @@
             margin: 0 auto;
             width: 100%;
             box-sizing: border-box;
-            opacity: 0; transform: scale(0.98); transition: 0.8s;
-            -webkit-overflow-scrolling: touch; /* 流暢滾動 */
+            opacity: 0; transform: scale(0.98); transition: opacity 0.5s, transform 0.5s;
+            -webkit-overflow-scrolling: touch;
         }
         #app-container.visible { opacity: 1; transform: scale(1); }
 
@@ -60,10 +64,25 @@
 
         /* Cards & Lists */
         .glass-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 15px; backdrop-filter: blur(10px); }
-        .loan-item { position: relative; margin-bottom: 12px; padding: 15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); transition: 0.2s; cursor: pointer; background: rgba(255,255,255,0.02); }
+        
+        /* 統一項目樣式 */
+        .loan-item { 
+            position: relative; 
+            margin-bottom: 12px; 
+            padding: 15px; 
+            border: 1px solid var(--glass-border); 
+            border-radius: var(--radius-md); 
+            transition: 0.2s; 
+            cursor: pointer; 
+            background: rgba(255,255,255,0.02);
+            border-left: 4px solid var(--accent-color); /* 預設藍色 (借款) */
+        }
         .loan-item:active { background: rgba(255,255,255,0.08); }
-        .item-repay { border-left: 4px solid var(--repay-color); }
-        .loan-main { display: flex; justify-content: space-between; align-items: flex-start; }
+        
+        /* 還款項目覆蓋顏色 */
+        .item-repay { border-left-color: var(--repay-color); }
+
+        .loan-main { display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; /* 讓點擊事件穿透到父層 */ }
         .loan-info h4 { margin: 0 0 4px 0; font-size: 15px; }
         .loan-info span { font-size: 12px; color: var(--text-secondary); display: block; }
         .loan-amount { text-align: right; }
@@ -75,6 +94,7 @@
         .action-sheet { background: #1c1c1e; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px 20px 40px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .action-sheet.show { transform: translateY(0); }
         .action-btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; margin-bottom: 12px; cursor: pointer; }
+        .btn-info { background: #2c2c2e; color: var(--accent-color); }
         .btn-edit { background: var(--accent-color); color: white; }
         .btn-delete { background: var(--danger-color); color: white; }
         .btn-cancel { background: #3a3a3c; color: white; margin-bottom: 0; }
@@ -86,8 +106,10 @@
         .entry-form input { background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; font-size: 16px; }
         .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; background: white; color: black; transition: 0.2s; }
         .submit-btn:active { opacity: 0.8; transform: scale(0.98); }
+        .submit-btn.loading { opacity: 0.5; pointer-events: none; }
         
         .loan-details { max-height: 0; overflow: hidden; transition: 0.3s ease-out; font-size: 12px; color: var(--text-secondary); border-top: 0px solid rgba(255,255,255,0.1); }
+        /* 透過 JS 加入 .expanded 類別來展開 */
         .loan-item.expanded .loan-details { max-height: 1000px; margin-top: 12px; padding-top: 12px; border-top-width: 1px; }
     </style>
 </head>
@@ -95,7 +117,7 @@
 
     <div class="ambient-bg"></div>
 
-    <div id="intro-layer">
+    <div id="intro-layer" class="active">
         <div class="intro-content">
             <h2 style="letter-spacing:4px">小數簿</h2>
             <div id="status-msg" style="font-size:13px; color:var(--text-secondary)">正在讀取雲端數據...</div>
@@ -140,9 +162,7 @@
     <div class="action-overlay" id="action-overlay" onclick="App.closeActions()">
         <div class="action-sheet" id="action-sheet" onclick="event.stopPropagation()">
             <div id="selected-info" style="margin-bottom:20px; font-size:14px; color:var(--text-secondary); line-height:1.5"></div>
-            <button class="action-btn btn-edit" onclick="App.editItem()">編輯此項目</button>
-            <button class="action-btn btn-delete" onclick="App.deleteItem()">刪除記錄</button>
-            <button class="action-btn btn-cancel" onclick="App.closeActions()">取消</button>
+            <div id="action-buttons"></div>
         </div>
     </div>
 
@@ -161,7 +181,11 @@
                 this.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 await this.sb.auth.signInAnonymously();
                 this.startIntro();
+                await this.refreshData(true); // true = first load
+            },
 
+            // 重構：獨立的數據刷新函數，不重載頁面
+            async refreshData(isFirstLoad = false) {
                 try {
                     const [l, r, c] = await Promise.all([
                         this.sb.from('loan_records').select('*').order('transaction_date', {ascending: true}),
@@ -172,15 +196,21 @@
                     this.data.loans = l.data || [];
                     this.data.repays = r.data || [];
                     await this.calculate();
-                    this.finishIntro();
-                } catch (e) { alert("同步失敗: " + e.message); }
+                    this.render();
+                    
+                    if (isFirstLoad) this.finishIntro();
+                } catch (e) { 
+                    alert("同步失敗: " + e.message); 
+                    if (isFirstLoad) document.getElementById('status-msg').innerText = "發生錯誤，請重新整理";
+                }
             },
 
             startIntro() {
                 let p = 0;
                 const timer = setInterval(() => {
                     p += Math.random() * 8;
-                    document.getElementById('progress-bar').style.width = Math.min(p, 90) + '%';
+                    const bar = document.getElementById('progress-bar');
+                    if(bar) bar.style.width = Math.min(p, 90) + '%';
                     if (p > 90) clearInterval(timer);
                 }, 100);
             },
@@ -189,30 +219,67 @@
                 document.getElementById('progress-bar').style.width = '100%';
                 setTimeout(() => {
                     document.getElementById('intro-layer').style.opacity = 0;
+                    document.getElementById('intro-layer').classList.remove('active');
                     document.getElementById('app-container').classList.add('visible');
-                    this.render();
-                    setTimeout(() => document.getElementById('intro-layer').remove(), 800);
+                    setTimeout(() => document.getElementById('intro-layer').style.display = 'none', 800);
                 }, 500);
             },
 
+            parseLocalYMD(dateStr) {
+                const parts = dateStr.split('-');
+                return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+            },
+
+            formatLocalYMD(dateObj) {
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            },
+
+            formatDisplayDate(dateObj) {
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getDate()).padStart(2, '0');
+                return `${m}-${d}`;
+            },
+
             async calculate() {
-                const today = new Date();
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
                 for (let loan of this.data.loans) {
                     let prin = parseFloat(loan.principal_amount);
-                    let d = new Date(loan.transaction_date);
+                    let currentD = this.parseLocalYMD(loan.transaction_date);
+                    currentD.setHours(0,0,0,0);
+                    const todayLimit = new Date(today);
+                    todayLimit.setHours(0,0,0,0);
+
                     let hist = [];
-                    while (d < today) {
-                        let next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-                        if (next > today) next = new Date(today);
-                        if (next <= d) break;
-                        const ds = d.toISOString().split('T')[0];
+
+                    while (currentD < todayLimit) {
+                        let nextD = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 1);
+                        nextD.setHours(0,0,0,0);
+                        if (nextD > todayLimit) nextD = new Date(todayLimit);
+                        if (nextD <= currentD) break;
+
+                        const ds = this.formatLocalYMD(currentD);
                         const h = await this.getHibor(ds);
                         const r = Math.max(0, h - 1);
-                        const days = Math.ceil((next - d) / 86400000);
-                        const interest = prin * (r / 100) * (days / 365);
-                        hist.push({ ds, days, r, amt: interest });
-                        prin += interest;
-                        d = next;
+                        const diffTime = nextD - currentD;
+                        const days = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (days > 0) {
+                            const interest = prin * (r / 100) * (days / 365);
+                            const segmentEnd = new Date(nextD);
+                            segmentEnd.setDate(segmentEnd.getDate() - 1);
+                            
+                            hist.push({ 
+                                ds: `${this.formatDisplayDate(currentD)}~${this.formatDisplayDate(segmentEnd)}`,
+                                days, r, amt: interest 
+                            });
+                            prin += interest;
+                        }
+                        currentD = nextD;
                     }
                     loan.compBal = prin;
                     loan.totalInt = prin - parseFloat(loan.principal_amount);
@@ -260,8 +327,14 @@
                 allItems.forEach(item => {
                     const el = document.createElement('div');
                     const isLoan = item.type === 'loan';
-                    el.className = `loan-item ${isLoan ? '' : 'item-repay'} ${item.isDone ? 'settled' : ''}`;
+                    const itemId = `item-${item.type}-${item.id}`; // 產生唯一ID
                     
+                    el.className = `loan-item ${isLoan ? '' : 'item-repay'} ${item.isDone ? 'settled' : ''}`;
+                    el.id = itemId; // 設定 DOM ID
+                    
+                    // 點擊事件：全部改為開啟 Action Sheet
+                    el.onclick = () => App.showActions(item, itemId);
+
                     if (isLoan) {
                         tb += item.rem;
                         const ratio = item.compBal > 0 ? (item.rem / item.compBal) : 0;
@@ -269,7 +342,7 @@
                         ti += item.totalInt * ratio;
 
                         el.innerHTML = `
-                            <div class="loan-main" onclick="this.parentElement.classList.toggle('expanded')">
+                            <div class="loan-main">
                                 <div class="loan-info">
                                     <h4 class="privacy-target">${item.description}</h4>
                                     <span class="privacy-target">${item.transaction_date} · 本金 $${parseFloat(item.principal_amount).toFixed(2)}</span>
@@ -283,14 +356,14 @@
                             </div>
                             <div class="loan-details">
                                 ${item.hist.map(h => `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                                    <span>${h.ds} (${h.days}日 @ ${h.r.toFixed(2)}%)</span>
+                                    <span style="font-family:'JetBrains Mono', monospace; font-size:11px">${h.ds} (${h.days}日 @ ${h.r.toFixed(2)}%)</span>
                                     <span class="privacy-target">+$${h.amt.toFixed(2)}</span>
                                 </div>`).join('')}
                             </div>
                         `;
                     } else {
                         el.innerHTML = `
-                            <div class="loan-main" onclick="App.showActions(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                            <div class="loan-main">
                                 <div class="loan-info">
                                     <h4 style="color:var(--repay-color)">還款記錄</h4>
                                     <span class="privacy-target">${item.transaction_date} · ${item.description}</span>
@@ -301,10 +374,6 @@
                             </div>
                         `;
                     }
-
-                    if (isLoan) {
-                        el.oncontextmenu = (e) => { e.preventDefault(); this.showActions(item); };
-                    }
                     list.appendChild(el);
                 });
 
@@ -314,10 +383,31 @@
                 this.applyPrivacy();
             },
 
-            showActions(item) {
+            showActions(item, domId) {
                 this.selectedItem = item;
-                const amt = item.type === 'loan' ? item.principal_amount : item.amount;
-                document.getElementById('selected-info').innerHTML = `<strong>${item.type === 'loan' ? '借款' : '還款'}</strong><br>${item.transaction_date}<br>${item.description}<br>金額: $${parseFloat(amt).toFixed(2)}`;
+                this.selectedDomId = domId; // 記住當前 DOM ID 供展開使用
+                const isLoan = item.type === 'loan';
+                const amt = isLoan ? item.principal_amount : item.amount;
+                
+                document.getElementById('selected-info').innerHTML = `
+                    <strong style="color:${isLoan ? 'var(--accent-color)' : 'var(--repay-color)'}">
+                        ${isLoan ? '借款' : '還款'}
+                    </strong><br>
+                    ${item.transaction_date}<br>${item.description}<br>金額: $${parseFloat(amt).toFixed(2)}
+                `;
+
+                // 動態生成按鈕
+                let buttonsHtml = '';
+                if (isLoan) {
+                    buttonsHtml += `<button class="action-btn btn-info" onclick="App.toggleDetails()">查看利息算式</button>`;
+                }
+                buttonsHtml += `
+                    <button class="action-btn btn-edit" onclick="App.editItem()">編輯此項目</button>
+                    <button class="action-btn btn-delete" onclick="App.deleteItem()">刪除記錄</button>
+                    <button class="action-btn btn-cancel" onclick="App.closeActions()">取消</button>
+                `;
+                document.getElementById('action-buttons').innerHTML = buttonsHtml;
+
                 document.getElementById('action-overlay').style.display = 'flex';
                 setTimeout(() => document.getElementById('action-sheet').classList.add('show'), 10);
             },
@@ -327,30 +417,43 @@
                 setTimeout(() => document.getElementById('action-overlay').style.display = 'none', 300);
             },
 
+            toggleDetails() {
+                this.closeActions();
+                const el = document.getElementById(this.selectedDomId);
+                if (el) el.classList.toggle('expanded');
+            },
+
             async deleteItem() {
                 if (!confirm("確定要刪除這筆記錄嗎？")) return;
                 const table = this.selectedItem.type === 'loan' ? 'loan_records' : 'repayment_records';
                 const { error } = await this.sb.from(table).delete().eq('id', this.selectedItem.id);
                 if (error) alert(error.message);
-                else location.reload();
+                else {
+                    this.closeActions();
+                    this.refreshData(); // 使用 refreshData 代替 reload
+                }
             },
 
             async editItem() {
-                const oldAmt = this.selectedItem.type === 'loan' ? this.selectedItem.principal_amount : this.selectedItem.amount;
+                const isLoan = this.selectedItem.type === 'loan';
+                const oldAmt = isLoan ? this.selectedItem.principal_amount : this.selectedItem.amount;
                 const newAmt = prompt("修改金額:", parseFloat(oldAmt).toFixed(2));
                 if (newAmt === null || isNaN(newAmt)) return;
                 
                 const newDesc = prompt("修改描述:", this.selectedItem.description);
                 if (newDesc === null) return;
 
-                const table = this.selectedItem.type === 'loan' ? 'loan_records' : 'repayment_records';
+                const table = isLoan ? 'loan_records' : 'repayment_records';
                 const payload = { description: newDesc };
-                if (this.selectedItem.type === 'loan') payload.principal_amount = parseFloat(newAmt).toFixed(2);
+                if (isLoan) payload.principal_amount = parseFloat(newAmt).toFixed(2);
                 else payload.amount = parseFloat(newAmt).toFixed(2);
 
                 const { error } = await this.sb.from(table).update(payload).eq('id', this.selectedItem.id);
                 if (error) alert(error.message);
-                else location.reload();
+                else {
+                    this.closeActions();
+                    this.refreshData(); // 使用 refreshData 代替 reload
+                }
             },
 
             togglePrivacy() {
@@ -372,6 +475,10 @@
                 const amt = document.getElementById('in-amt').value;
                 if (!date || !amt || isNaN(amt)) return alert("請填寫正確金額");
 
+                const btn = document.getElementById('btn-submit');
+                btn.classList.add('loading');
+                btn.innerText = '處理中...';
+
                 const table = this.currentMode === 'loan' ? 'loan_records' : 'repayment_records';
                 const payload = { transaction_date: date, description: desc || '未分類' };
                 const formattedAmt = parseFloat(amt).toFixed(2);
@@ -380,8 +487,17 @@
                 else payload.amount = formattedAmt;
 
                 const { error } = await this.sb.from(table).insert([payload]);
+                
+                btn.classList.remove('loading');
+                btn.innerText = this.currentMode === 'loan' ? '確認借款入帳' : '確認還款記錄';
+
                 if (error) alert(error.message);
-                else location.reload();
+                else {
+                    // 清空輸入
+                    document.getElementById('in-desc').value = '';
+                    document.getElementById('in-amt').value = '';
+                    this.refreshData(); // 使用 refreshData 代替 reload
+                }
             }
         };
 
