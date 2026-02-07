@@ -12,54 +12,64 @@
 
     <style>
         :root {
-            --bg-color: #050505;
-            --glass-bg: rgba(20, 20, 25, 0.9);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --accent-color: #0A84FF;
-            --success-color: #30D158;
-            --repay-color: #FF9F0A;
-            --danger-color: #FF453A;
-            --text-secondary: rgba(255, 255, 255, 0.6);
+            /* 修改後的配色：深海藍灰 */
+            --bg-color: #0f172a; 
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-color: #38bdf8;   /* 亮天藍 */
+            --success-color: #4ade80;  /* 亮綠色 */
+            --repay-color: #fbbf24;    /* 暖金黃 */
+            --danger-color: #f87171;   /* 珊瑚紅 */
+            --text-secondary: rgba(148, 163, 184, 0.8);
             --radius-lg: 16px;
             --radius-md: 8px;
         }
 
-        body { margin: 0; background: var(--bg-color); color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { 
+            margin: 0; 
+            background: var(--bg-color); 
+            color: #f1f5f9; 
+            font-family: 'Inter', sans-serif; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
         .mono-num { font-family: 'JetBrains Mono', monospace; }
 
-        /* 背景流光 (移植自附件) */
+        /* 修改背景流光：增加一點環境光感 */
         .ambient-bg {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #000000 70%);
+            background: 
+                radial-gradient(circle at 20% 20%, #1e293b 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, #0f172a 0%, #020617 100%);
             z-index: -1;
         }
 
-        /* Intro 層 (移植自附件) */
+        /* Intro 層 */
         #intro-layer {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: rgba(5, 5, 5, 0.6);
+            background: #0f172a;
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             z-index: 9999;
             transition: opacity 0.8s ease, backdrop-filter 0.8s ease;
         }
         #intro-layer.fade-out { opacity: 0; backdrop-filter: blur(0px); pointer-events: none; }
         .intro-content { width: 80%; max-width: 300px; text-align: center; }
-        .app-title { font-size: 24px; font-weight: 600; letter-spacing: 4px; margin-bottom: 50px; text-transform: uppercase; }
+        .app-title { font-size: 24px; font-weight: 600; letter-spacing: 4px; margin-bottom: 50px; text-transform: uppercase; color: var(--accent-color); }
 
-        /* 狀態文字動態 (移植自附件) */
         .status-text-container { height: 30px; margin-bottom: 15px; position: relative; }
         .status-text { font-size: 14px; color: var(--text-secondary); position: absolute; width: 100%; left: 0; top: 0; opacity: 0; transform: translateY(10px); transition: all 0.5s ease; }
         .status-text.active { opacity: 1; transform: translateY(0); }
         .status-text.exit { opacity: 0; transform: translateY(-10px); }
 
-        /* 進度條 (移植自附件) */
-        .progress-track { width: 100%; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background: var(--success-color); border-radius: 4px; box-shadow: 0 0 10px rgba(48, 209, 88, 0.5); transition: width 0.1s linear; }
+        .progress-track { width: 100%; height: 4px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: var(--success-color); border-radius: 4px; box-shadow: 0 0 10px rgba(74, 222, 128, 0.3); transition: width 0.1s linear; }
 
-        /* Header (Fix Bug) */
+        /* Header */
         .sticky-header {
             position: sticky; top: 0; padding: 40px 20px 20px;
             background: linear-gradient(to bottom, var(--bg-color) 85%, transparent);
@@ -77,33 +87,34 @@
 
         /* Privacy */
         .privacy-blur { filter: blur(12px); pointer-events: none; user-select: none; opacity: 0.2; }
-        #privacy-toggle { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; margin-top: 15px; cursor: pointer; }
+        #privacy-toggle { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-secondary); padding: 6px 14px; border-radius: 20px; font-size: 12px; margin-top: 15px; cursor: pointer; }
 
         /* Lists */
-        .glass-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 15px; backdrop-filter: blur(10px); }
-        .loan-item { position: relative; margin-bottom: 12px; padding: 15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); transition: 0.2s; cursor: pointer; background: rgba(255,255,255,0.02); border-left: 4px solid var(--accent-color); }
+        .glass-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 15px; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+        .loan-item { position: relative; margin-bottom: 12px; padding: 15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); transition: 0.2s; cursor: pointer; background: rgba(255,255,255,0.03); border-left: 4px solid var(--accent-color); }
         .item-repay { border-left-color: var(--repay-color); }
         .loan-main { display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
-        .loan-info h4 { margin: 0 0 4px 0; font-size: 15px; }
+        .loan-info h4 { margin: 0 0 4px 0; font-size: 15px; color: #fff; }
         .loan-info span { font-size: 12px; color: var(--text-secondary); display: block; }
         .loan-amount { text-align: right; }
         .profit { font-size: 11px; color: var(--success-color); display: block; }
         
         /* Action Sheet */
-        .action-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 10000; justify-content: center; align-items: flex-end; }
-        .action-sheet { background: #1c1c1e; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px 20px 40px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .action-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; z-index: 10000; justify-content: center; align-items: flex-end; backdrop-filter: blur(4px); }
+        .action-sheet { background: #1e293b; width: 100%; max-width: 500px; border-radius: 24px 24px 0 0; padding: 20px 20px 40px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-top: 1px solid var(--glass-border); }
         .action-sheet.show { transform: translateY(0); }
         .action-btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; margin-bottom: 12px; cursor: pointer; }
-        .btn-edit { background: var(--accent-color); color: white; }
+        .btn-edit { background: var(--accent-color); color: #0f172a; }
         .btn-delete { background: var(--danger-color); color: white; }
-        .btn-cancel { background: #3a3a3c; color: white; margin-bottom: 0; }
+        .btn-cancel { background: rgba(255,255,255,0.05); color: white; margin-bottom: 0; }
 
         /* Form */
         .type-switcher { display: flex; gap: 8px; margin-bottom: 15px; }
-        .type-btn { flex: 1; padding: 10px; text-align: center; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 13px; cursor: pointer; color: var(--text-secondary); }
-        .type-btn.active { background: white; color: black; font-weight: 600; }
-        .entry-form input { background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-size: 16px; }
-        .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; background: white; color: black; }
+        .type-btn { flex: 1; padding: 10px; text-align: center; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 13px; cursor: pointer; color: var(--text-secondary); transition: 0.3s; }
+        .type-btn.active { background: var(--accent-color); color: #0f172a; font-weight: 600; border-color: var(--accent-color); }
+        .entry-form input { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-size: 16px; }
+        .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; background: #fff; color: #000; transition: 0.2s; }
+        .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
 
         .loan-details { max-height: 0; overflow: hidden; transition: 0.3s ease-out; font-size: 12px; color: var(--text-secondary); border-top: 0px solid rgba(255,255,255,0.1); }
         .loan-item.expanded .loan-details { max-height: 1000px; margin-top: 12px; padding-top: 12px; border-top-width: 1px; }
@@ -129,7 +140,7 @@
     </div>
 
     <div class="sticky-header">
-        <h2 class="mono-num privacy-target" id="total-balance">$0.00</h2>
+        <h2 class="mono-num privacy-target" id="total-balance" style="font-size: 32px; margin:0">$0.00</h2>
         <p class="privacy-target" style="font-size:13px; color:var(--text-secondary); margin:8px 0">當前總結欠 (HIBOR - 1% 滾存)</p>
         <button id="privacy-toggle" onclick="App.togglePrivacy()">👁️ 隱身模式</button>
     </div>
@@ -138,11 +149,11 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px">
             <div class="glass-card" style="margin-bottom:0; padding:15px">
                 <label style="font-size:11px; color:var(--text-secondary)">原始本金</label>
-                <div class="mono-num privacy-target" id="total-principal" style="font-weight:600">$0.00</div>
+                <div class="mono-num privacy-target" id="total-principal" style="font-weight:600; font-size: 15px;">$0.00</div>
             </div>
             <div class="glass-card" style="margin-bottom:0; padding:15px">
                 <label style="font-size:11px; color:var(--text-secondary)">累計利息</label>
-                <div class="mono-num privacy-target" id="total-interest" style="font-weight:600; color:var(--success-color)">+$0.00</div>
+                <div class="mono-num privacy-target" id="total-interest" style="font-weight:600; font-size: 15px; color:var(--success-color)">+$0.00</div>
             </div>
         </div>
 
@@ -173,14 +184,11 @@
         const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
 
-        // =========================================
-        // Intro 動畫控制器 (移植自附件邏輯)
-        // =========================================
         const Intro = {
             progress: 0,
             isDataReady: false,
             startTime: null,
-            minDuration: 2500, // 強制最少播 2.5 秒
+            minDuration: 2500,
             els: {
                 layer: document.getElementById('intro-layer'),
                 bar: document.getElementById('progress-bar'),
@@ -209,7 +217,7 @@
                 this.startTime = performance.now();
                 this.showText(0);
                 requestAnimationFrame((t) => this.tick(t));
-                App.init(); // 同時開始抓數據
+                App.init();
             },
 
             tick(now) {
@@ -390,11 +398,11 @@
                             <div class="loan-main">
                                 <div class="loan-info">
                                     <h4 class="privacy-target">${item.description}</h4>
-                                    <span class="privacy-target">${item.transaction_date} · 本金 $${parseFloat(item.principal_amount).toFixed(2)}</span>
+                                    <span class="privacy-target">${item.transaction_date} · 本金 $${parseFloat(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                                 </div>
                                 <div class="loan-amount">
-                                    ${item.isDone ? '<span class="settled-tag">已清還</span>' : `
-                                        <span class="mono-num privacy-target" style="font-weight:600">$${item.rem.toFixed(2)}</span>
+                                    ${item.isDone ? '<span style="color:var(--text-secondary); font-size:12px;">已清還</span>' : `
+                                        <span class="mono-num privacy-target" style="font-weight:600; color:#fff">$${item.rem.toFixed(2)}</span>
                                         <span class="profit privacy-target">+$${item.totalInt.toFixed(2)}</span>
                                     `}
                                 </div>
@@ -422,9 +430,9 @@
                     list.appendChild(el);
                 });
 
-                document.getElementById('total-balance').innerText = '$' + tb.toFixed(2);
-                document.getElementById('total-principal').innerText = '$' + tp.toFixed(2);
-                document.getElementById('total-interest').innerText = '+$' + ti.toFixed(2);
+                document.getElementById('total-balance').innerText = '$' + tb.toLocaleString(undefined, {minimumFractionDigits: 2});
+                document.getElementById('total-principal').innerText = '$' + tp.toLocaleString(undefined, {minimumFractionDigits: 2});
+                document.getElementById('total-interest').innerText = '+$' + ti.toLocaleString(undefined, {minimumFractionDigits: 2});
                 this.applyPrivacy();
             },
 
@@ -435,7 +443,7 @@
                 document.getElementById('selected-info').innerHTML = `<strong>${isLoan ? '借款' : '還款'}</strong><br>${item.description}<br>金額: $${parseFloat(isLoan ? item.principal_amount : item.amount).toFixed(2)}`;
                 
                 let btns = '';
-                if (isLoan) btns += `<button class="action-btn" style="background:#2c2c2e;color:var(--accent-color)" onclick="App.toggleDetails()">查看利息算式</button>`;
+                if (isLoan) btns += `<button class="action-btn" style="background:rgba(255,255,255,0.05);color:var(--accent-color)" onclick="App.toggleDetails()">查看利息算式</button>`;
                 btns += `<button class="action-btn btn-edit" onclick="App.editItem()">編輯項目</button>
                          <button class="action-btn btn-delete" onclick="App.deleteItem()">刪除記錄</button>
                          <button class="action-btn btn-cancel" onclick="App.closeActions()">取消</button>`;
