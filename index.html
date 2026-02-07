@@ -212,25 +212,103 @@
                 }
             },
 
-            startIntro() {
-                let p = 0;
-                const timer = setInterval(() => {
-                    p += Math.random() * 8;
-                    const bar = document.getElementById('progress-bar');
-                    if(bar) bar.style.width = Math.min(p, 90) + '%';
-                    if (p > 90) clearInterval(timer);
-                }, 100);
+   =========================================
+        // 2. Intro 動畫控制器
+        // =========================================
+        const Intro = {
+            progress: 0,
+            isDataReady: false, // 數據是否算好
+            startTime: null,
+            minDuration: 2500, // 強制最少播 2.5 秒 (儀式感)
+            
+            els: {
+                layer: document.getElementById('intro-layer'),
+                bar: document.getElementById('progress-bar'),
+                texts: [
+                    document.getElementById('text-1'),
+                    document.getElementById('text-2'),
+                    document.getElementById('text-3'),
+                    document.getElementById('text-4')
+                ],
+                app: document.getElementById('app-container')
             },
 
-            finishIntro() {
-                document.getElementById('progress-bar').style.width = '100%';
-                setTimeout(() => {
-                    document.getElementById('intro-layer').style.opacity = 0;
-                    document.getElementById('intro-layer').classList.remove('active');
-                    document.getElementById('app-container').classList.add('visible');
-                    setTimeout(() => document.getElementById('intro-layer').style.display = 'none', 800);
-                }, 500);
+            showText(index) {
+                this.els.texts.forEach((el, i) => {
+                    if (i === index) {
+                        el.classList.add('active');
+                        el.classList.remove('exit');
+                    } else if (el.classList.contains('active')) {
+                        el.classList.add('exit');
+                        el.classList.remove('active');
+                    }
+                });
             },
+
+            start() {
+                console.log("🎬 Intro Animation Started");
+                this.startTime = performance.now();
+                this.showText(0); // 立即顯示第一句
+                
+                // 開始 Animation Loop
+                requestAnimationFrame((t) => this.tick(t));
+                
+                // 同時開始抓數據
+                AppEngine.init(); 
+            },
+
+            tick(now) {
+                const elapsed = now - this.startTime;
+
+                // --- 進度條邏輯 ---
+                
+                                // 階段 1: 0% -> 70% (加速：約 1 秒到達)
+                if (this.progress < 70) {
+                    this.progress += 1.2; 
+                }
+                // 階段 2: 70% -> 90% (調整速度：確保在 2.5s 前到達 90%，觸發等待文案)
+                else if (this.progress < 90) {
+                    this.progress += 0.35;
+                    this.showText(1); // 切換到 "逐筆核對"
+                }
+                // 階段 3: 卡在 90% (等待數據 OR 等待儀式感時間)
+                else if (this.progress >= 90) {
+                    
+                    // 判斷是否滿足解鎖條件：數據好了 AND 時間夠了
+                    const timeIsEnough = elapsed > this.minDuration;
+                    
+                    if (this.isDataReady && timeIsEnough) {
+                        // 衝刺到 100%
+                        this.progress += 2.0; 
+                    } else {
+                        // 繼續卡著，並顯示 "計算中，唔急"
+                        this.progress = 90;
+                        this.showText(2);
+                    }
+                }
+
+                // 渲染
+                this.els.bar.style.width = Math.min(this.progress, 100) + '%';
+
+                // 結束檢查
+                if (this.progress >= 100) {
+                    this.finish();
+                } else {
+                    requestAnimationFrame((t) => this.tick(t));
+                }
+            },
+
+            finish() {
+                this.showText(3); // 準備就緒
+                setTimeout(() => {
+                    this.els.layer.classList.add('fade-out');
+                    this.els.app.classList.add('visible');
+                    document.body.style.overflow = 'auto';
+                }, 500);
+            }
+        };
+
+        // 
 
             parseLocalYMD(dateStr) {
                 const parts = dateStr.split('-');
