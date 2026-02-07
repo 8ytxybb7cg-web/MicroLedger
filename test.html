@@ -32,7 +32,7 @@
         .progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 20px; }
         .progress-bar { height: 100%; width: 0%; background: var(--success-color); transition: width 0.1s linear; }
 
-        /* 固定 Header 修正 */
+        /* 固定 Header */
         .sticky-header {
             padding: 40px 20px 20px;
             background: linear-gradient(to bottom, var(--bg-color) 80%, transparent);
@@ -50,7 +50,7 @@
             width: 100%;
             box-sizing: border-box;
             opacity: 0; transform: scale(0.98); transition: 0.8s;
-            -webkit-overflow-scrolling: touch; /* 流暢滾動 */
+            -webkit-overflow-scrolling: touch;
         }
         #app-container.visible { opacity: 1; transform: scale(1); }
 
@@ -195,30 +195,98 @@
                 }, 500);
             },
 
+            // 輔助函數：處理日期字串，避免時區偏移
+            parseLocalYMD(dateStr) {
+                const parts = dateStr.split('-');
+                // 建構一個本地時間，設為中午12點以確保跨日時區安全
+                return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+            },
+
+            formatLocalYMD(dateObj) {
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            },
+
+            formatDisplayDate(dateObj) {
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getDate()).padStart(2, '0');
+                return `${m}-${d}`;
+            },
+
             async calculate() {
-                const today = new Date();
+                const now = new Date();
+                // 設定為今日午夜後一毫秒，確保包含今日運算
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
                 for (let loan of this.data.loans) {
                     let prin = parseFloat(loan.principal_amount);
-                    let d = new Date(loan.transaction_date);
+                    // 使用解析函數確保日期準確
+                    let currentD = this.parseLocalYMD(loan.transaction_date);
+                    
+                    // 將當前指標時間歸零 (00:00:00) 方便計算天數
+                    currentD.setHours(0,0,0,0);
+                    const todayLimit = new Date(today);
+                    todayLimit.setHours(0,0,0,0);
+
                     let hist = [];
-                    while (d < today) {
-                        let next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-                        if (next > today) next = new Date(today);
-                        if (next <= d) break;
-                        const ds = d.toISOString().split('T')[0];
+
+                    // 循環計算直到今天
+                    while (currentD < todayLimit) {
+                        // 計算下個檢查點：下個月的1號
+                        // 例如 8月23日 -> 下個檢查點是 9月1日
+                        let nextD = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 1);
+                        nextD.setHours(0,0,0,0);
+
+                        // 如果下個檢查點超過今天，則截斷至今天
+                        if (nextD > todayLimit) {
+                            nextD = new Date(todayLimit);
+                        }
+
+                        // 如果沒有前進（例如今天就是借款日），跳出
+                        if (nextD <= currentD) break;
+
+                        // 取得當前日期的 YYYY-MM-DD 用於查詢匯率
+                        const ds = this.formatLocalYMD(currentD);
                         const h = await this.getHibor(ds);
-                        const r = Math.max(0, h - 1);
-                        const days = Math.ceil((next - d) / 86400000);
-                        const interest = prin * (r / 100) * (days / 365);
-                        hist.push({ ds, days, r, amt: interest });
-                        prin += interest;
-                        d = next;
+                        const r = Math.max(0, h - 1); // HIBOR - 1%
+
+                        // 計算天數差 (毫秒轉天)
+                        const diffTime = nextD - currentD;
+                        const days = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (days > 0) {
+                            const interest = prin * (r / 100) * (days / 365);
+                            
+                            // 顯示格式優化：顯示 "開始日期 ~ 結束日期"
+                            // 結束日期顯示為 nextD 的前一天 (因為 nextD 是下個區間的開始)
+                            const segmentEnd = new Date(nextD);
+                            segmentEnd.setDate(segmentEnd.getDate() - 1); // 減一天顯示為區間結束日
+                            
+                            const displayLabel = `${this.formatDisplayDate(currentD)}~${this.formatDisplayDate(segmentEnd)}`;
+
+                            hist.push({ 
+                                ds: displayLabel, // 顯示用標籤
+                                rawDate: ds,      // 數據用
+                                days, 
+                                r, 
+                                amt: interest 
+                            });
+                            
+                            prin += interest;
+                        }
+
+                        // 前進到下個區間起點
+                        currentD = nextD;
                     }
+
                     loan.compBal = prin;
                     loan.totalInt = prin - parseFloat(loan.principal_amount);
                     loan.hist = hist;
                 }
 
+                // 計算還款與餘額
                 let pool = this.data.repays.reduce((s, x) => s + parseFloat(x.amount), 0);
                 this.data.loans.forEach(loan => {
                     if (pool <= 0) { loan.rem = loan.compBal; loan.isDone = false; }
@@ -230,13 +298,14 @@
             async getHibor(ds) {
                 if (this.data.hiborCache[ds]) return this.data.hiborCache[ds];
                 try {
+                    // API 查詢
                     const res = await fetch(`https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-daily?segment=hibor.fixing&date=${ds}`);
                     const j = await res.json();
                     const v = j.result?.records[0]?.ir_1m || 4.0;
                     this.data.hiborCache[ds] = v;
                     this.sb.from('hibor_cache').insert({rate_date: ds, rate_value: v}).then();
                     return v;
-                } catch { return 4.0; }
+                } catch { return 4.0; } // 預設 4.0%
             },
 
             setMode(m) {
@@ -283,7 +352,7 @@
                             </div>
                             <div class="loan-details">
                                 ${item.hist.map(h => `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                                    <span>${h.ds} (${h.days}日 @ ${h.r.toFixed(2)}%)</span>
+                                    <span style="font-family:'JetBrains Mono', monospace; font-size:11px">${h.ds} (${h.days}日 @ ${h.r.toFixed(2)}%)</span>
                                     <span class="privacy-target">+$${h.amt.toFixed(2)}</span>
                                 </div>`).join('')}
                             </div>
