@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>小數簿 Micro Ledger Pro</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -24,36 +26,51 @@
 
         body { margin: 0; background: var(--bg-color); color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .mono-num { font-family: 'JetBrains Mono', monospace; }
-        .ambient-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 30%, #1a1a2e 0%, #000000 80%); z-index: -1; }
 
-        /* Intro Layer */
-        #intro-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(5, 5, 5, 1); z-index: 9999; transition: opacity 0.8s ease; pointer-events: none; }
-        #intro-layer.active { pointer-events: all; }
-        .intro-content { width: 80%; max-width: 300px; text-align: center; }
-        .progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 20px; }
-        .progress-bar { height: 100%; width: 0%; background: var(--success-color); transition: width 0.1s linear; }
-
-        /* 固定 Header */
-        .sticky-header {
-            position: sticky; /* 關鍵修正：改為 sticky */
-            top: 0;
-            padding: 40px 20px 20px;
-            background: linear-gradient(to bottom, var(--bg-color) 85%, transparent);
-            z-index: 100;
-            text-align: center;
-            flex-shrink: 0; /* 防止被壓縮 */
+        /* 背景流光 (移植自附件) */
+        .ambient-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #000000 70%);
+            z-index: -1;
         }
 
-        /* 滾動內容區 */
+        /* Intro 層 (移植自附件) */
+        #intro-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(5, 5, 5, 0.6);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 9999;
+            transition: opacity 0.8s ease, backdrop-filter 0.8s ease;
+        }
+        #intro-layer.fade-out { opacity: 0; backdrop-filter: blur(0px); pointer-events: none; }
+        .intro-content { width: 80%; max-width: 300px; text-align: center; }
+        .app-title { font-size: 24px; font-weight: 600; letter-spacing: 4px; margin-bottom: 50px; text-transform: uppercase; }
+
+        /* 狀態文字動態 (移植自附件) */
+        .status-text-container { height: 30px; margin-bottom: 15px; position: relative; }
+        .status-text { font-size: 14px; color: var(--text-secondary); position: absolute; width: 100%; left: 0; top: 0; opacity: 0; transform: translateY(10px); transition: all 0.5s ease; }
+        .status-text.active { opacity: 1; transform: translateY(0); }
+        .status-text.exit { opacity: 0; transform: translateY(-10px); }
+
+        /* 進度條 (移植自附件) */
+        .progress-track { width: 100%; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: var(--success-color); border-radius: 4px; box-shadow: 0 0 10px rgba(48, 209, 88, 0.5); transition: width 0.1s linear; }
+
+        /* Header (Fix Bug) */
+        .sticky-header {
+            position: sticky; top: 0; padding: 40px 20px 20px;
+            background: linear-gradient(to bottom, var(--bg-color) 85%, transparent);
+            z-index: 100; text-align: center; flex-shrink: 0;
+        }
+
+        /* 內容區 */
         #app-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0 20px 120px;
-            max-width: 600px;
-            margin: 0 auto;
-            width: 100%;
-            box-sizing: border-box;
-            opacity: 0; transform: scale(0.98); transition: opacity 0.5s, transform 0.5s;
+            flex: 1; overflow-y: auto; padding: 0 20px 120px;
+            max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box;
+            opacity: 0; transform: scale(0.98); transition: opacity 0.8s ease, transform 0.8s ease;
             -webkit-overflow-scrolling: touch;
         }
         #app-container.visible { opacity: 1; transform: scale(1); }
@@ -62,54 +79,33 @@
         .privacy-blur { filter: blur(12px); pointer-events: none; user-select: none; opacity: 0.2; }
         #privacy-toggle { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; margin-top: 15px; cursor: pointer; }
 
-        /* Cards & Lists */
+        /* Lists */
         .glass-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 15px; backdrop-filter: blur(10px); }
-        
-        /* 統一項目樣式 */
-        .loan-item { 
-            position: relative; 
-            margin-bottom: 12px; 
-            padding: 15px; 
-            border: 1px solid var(--glass-border); 
-            border-radius: var(--radius-md); 
-            transition: 0.2s; 
-            cursor: pointer; 
-            background: rgba(255,255,255,0.02);
-            border-left: 4px solid var(--accent-color); /* 預設藍色 (借款) */
-        }
-        .loan-item:active { background: rgba(255,255,255,0.08); }
-        
-        /* 還款項目覆蓋顏色 */
+        .loan-item { position: relative; margin-bottom: 12px; padding: 15px; border: 1px solid var(--glass-border); border-radius: var(--radius-md); transition: 0.2s; cursor: pointer; background: rgba(255,255,255,0.02); border-left: 4px solid var(--accent-color); }
         .item-repay { border-left-color: var(--repay-color); }
-
-        .loan-main { display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; /* 讓點擊事件穿透到父層 */ }
+        .loan-main { display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
         .loan-info h4 { margin: 0 0 4px 0; font-size: 15px; }
         .loan-info span { font-size: 12px; color: var(--text-secondary); display: block; }
         .loan-amount { text-align: right; }
         .profit { font-size: 11px; color: var(--success-color); display: block; }
-        .settled-tag { font-size: 10px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; color: var(--text-secondary); }
-
-        /* Action Menu */
+        
+        /* Action Sheet */
         .action-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 10000; justify-content: center; align-items: flex-end; }
         .action-sheet { background: #1c1c1e; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px 20px 40px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .action-sheet.show { transform: translateY(0); }
         .action-btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; margin-bottom: 12px; cursor: pointer; }
-        .btn-info { background: #2c2c2e; color: var(--accent-color); }
         .btn-edit { background: var(--accent-color); color: white; }
         .btn-delete { background: var(--danger-color); color: white; }
         .btn-cancel { background: #3a3a3c; color: white; margin-bottom: 0; }
 
-        /* Form Controls */
+        /* Form */
         .type-switcher { display: flex; gap: 8px; margin-bottom: 15px; }
-        .type-btn { flex: 1; padding: 10px; text-align: center; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 13px; cursor: pointer; color: var(--text-secondary); transition: 0.2s; }
-        .type-btn.active { background: white; color: black; border-color: white; font-weight: 600; }
-        .entry-form input { background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; font-size: 16px; }
-        .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; background: white; color: black; transition: 0.2s; }
-        .submit-btn:active { opacity: 0.8; transform: scale(0.98); }
-        .submit-btn.loading { opacity: 0.5; pointer-events: none; }
-        
+        .type-btn { flex: 1; padding: 10px; text-align: center; border-radius: 8px; border: 1px solid var(--glass-border); font-size: 13px; cursor: pointer; color: var(--text-secondary); }
+        .type-btn.active { background: white; color: black; font-weight: 600; }
+        .entry-form input { background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; color: white; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-size: 16px; }
+        .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; background: white; color: black; }
+
         .loan-details { max-height: 0; overflow: hidden; transition: 0.3s ease-out; font-size: 12px; color: var(--text-secondary); border-top: 0px solid rgba(255,255,255,0.1); }
-        /* 透過 JS 加入 .expanded 類別來展開 */
         .loan-item.expanded .loan-details { max-height: 1000px; margin-top: 12px; padding-top: 12px; border-top-width: 1px; }
     </style>
 </head>
@@ -117,11 +113,18 @@
 
     <div class="ambient-bg"></div>
 
-    <div id="intro-layer" class="active">
+    <div id="intro-layer">
         <div class="intro-content">
-            <h2 style="letter-spacing:4px">小數簿</h2>
-            <div id="status-msg" style="font-size:13px; color:var(--text-secondary)">正在讀取雲端數據...</div>
-            <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+            <div class="app-title">小數簿</div>
+            <div class="status-text-container">
+                <div class="status-text" id="text-1">整理每一筆小數中</div>
+                <div class="status-text" id="text-2">逐筆核對，請稍候</div>
+                <div class="status-text" id="text-3">計算中，唔急</div>
+                <div class="status-text" id="text-4">準備就緒</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
         </div>
     </div>
 
@@ -170,6 +173,81 @@
         const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_bnnah-2fsCaQnKZDoKNJQw_NuYQVvKi';
 
+        // =========================================
+        // Intro 動畫控制器 (移植自附件邏輯)
+        // =========================================
+        const Intro = {
+            progress: 0,
+            isDataReady: false,
+            startTime: null,
+            minDuration: 2500, // 強制最少播 2.5 秒
+            els: {
+                layer: document.getElementById('intro-layer'),
+                bar: document.getElementById('progress-bar'),
+                texts: [
+                    document.getElementById('text-1'),
+                    document.getElementById('text-2'),
+                    document.getElementById('text-3'),
+                    document.getElementById('text-4')
+                ],
+                app: document.getElementById('app-container')
+            },
+
+            showText(index) {
+                this.els.texts.forEach((el, i) => {
+                    if (i === index) {
+                        el.classList.add('active');
+                        el.classList.remove('exit');
+                    } else if (el.classList.contains('active')) {
+                        el.classList.add('exit');
+                        el.classList.remove('active');
+                    }
+                });
+            },
+
+            start() {
+                this.startTime = performance.now();
+                this.showText(0);
+                requestAnimationFrame((t) => this.tick(t));
+                App.init(); // 同時開始抓數據
+            },
+
+            tick(now) {
+                const elapsed = now - this.startTime;
+                
+                if (this.progress < 70) {
+                    this.progress += 1.2;
+                } else if (this.progress < 90) {
+                    this.progress += 0.35;
+                    this.showText(1);
+                } else if (this.progress >= 90) {
+                    const timeIsEnough = elapsed > this.minDuration;
+                    if (this.isDataReady && timeIsEnough) {
+                        this.progress += 2.0;
+                    } else {
+                        this.progress = 90;
+                        this.showText(2);
+                    }
+                }
+
+                this.els.bar.style.width = Math.min(this.progress, 100) + '%';
+                if (this.progress >= 100) {
+                    this.finish();
+                } else {
+                    requestAnimationFrame((t) => this.tick(t));
+                }
+            },
+
+            finish() {
+                this.showText(3);
+                setTimeout(() => {
+                    this.els.layer.classList.add('fade-out');
+                    this.els.app.classList.add('visible');
+                    document.body.style.overflow = 'auto';
+                }, 500);
+            }
+        };
+
         const App = {
             sb: null,
             isPrivacyMode: false,
@@ -180,11 +258,9 @@
             async init() {
                 this.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 await this.sb.auth.signInAnonymously();
-                this.startIntro();
-                await this.refreshData(true); // true = first load
+                await this.refreshData(true);
             },
 
-            // 重構：獨立的數據刷新函數，不重載頁面
             async refreshData(isFirstLoad = false) {
                 try {
                     const [l, r, c] = await Promise.all([
@@ -197,32 +273,8 @@
                     this.data.repays = r.data || [];
                     await this.calculate();
                     this.render();
-                    
-                    if (isFirstLoad) this.finishIntro();
-                } catch (e) { 
-                    alert("同步失敗: " + e.message); 
-                    if (isFirstLoad) document.getElementById('status-msg').innerText = "發生錯誤，請重新整理";
-                }
-            },
-
-            startIntro() {
-                let p = 0;
-                const timer = setInterval(() => {
-                    p += Math.random() * 8;
-                    const bar = document.getElementById('progress-bar');
-                    if(bar) bar.style.width = Math.min(p, 90) + '%';
-                    if (p > 90) clearInterval(timer);
-                }, 100);
-            },
-
-            finishIntro() {
-                document.getElementById('progress-bar').style.width = '100%';
-                setTimeout(() => {
-                    document.getElementById('intro-layer').style.opacity = 0;
-                    document.getElementById('intro-layer').classList.remove('active');
-                    document.getElementById('app-container').classList.add('visible');
-                    setTimeout(() => document.getElementById('intro-layer').style.display = 'none', 800);
-                }, 500);
+                    if (isFirstLoad) Intro.isDataReady = true;
+                } catch (e) { console.error(e); }
             },
 
             parseLocalYMD(dateStr) {
@@ -255,7 +307,6 @@
                     todayLimit.setHours(0,0,0,0);
 
                     let hist = [];
-
                     while (currentD < todayLimit) {
                         let nextD = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 1);
                         nextD.setHours(0,0,0,0);
@@ -272,7 +323,6 @@
                             const interest = prin * (r / 100) * (days / 365);
                             const segmentEnd = new Date(nextD);
                             segmentEnd.setDate(segmentEnd.getDate() - 1);
-                            
                             hist.push({ 
                                 ds: `${this.formatDisplayDate(currentD)}~${this.formatDisplayDate(segmentEnd)}`,
                                 days, r, amt: interest 
@@ -310,8 +360,6 @@
                 this.currentMode = m;
                 document.getElementById('tab-loan').className = `type-btn ${m==='loan'?'active':''}`;
                 document.getElementById('tab-repay').className = `type-btn ${m==='repay'?'active':''}`;
-                document.getElementById('in-desc').placeholder = m==='loan' ? '用途描述' : '還款來源/備註';
-                document.getElementById('btn-submit').innerText = m==='loan' ? '確認借款入帳' : '確認還款記錄';
             },
 
             render() {
@@ -327,12 +375,9 @@
                 allItems.forEach(item => {
                     const el = document.createElement('div');
                     const isLoan = item.type === 'loan';
-                    const itemId = `item-${item.type}-${item.id}`; // 產生唯一ID
-                    
+                    const itemId = `item-${item.type}-${item.id}`;
                     el.className = `loan-item ${isLoan ? '' : 'item-repay'} ${item.isDone ? 'settled' : ''}`;
-                    el.id = itemId; // 設定 DOM ID
-                    
-                    // 點擊事件：全部改為開啟 Action Sheet
+                    el.id = itemId;
                     el.onclick = () => App.showActions(item, itemId);
 
                     if (isLoan) {
@@ -356,7 +401,7 @@
                             </div>
                             <div class="loan-details">
                                 ${item.hist.map(h => `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                                    <span style="font-family:'JetBrains Mono', monospace; font-size:11px">${h.ds} (${h.days}日 @ ${h.r.toFixed(2)}%)</span>
+                                    <span>${h.ds} (${h.days}日 @ ${h.r.toFixed(2)}%)</span>
                                     <span class="privacy-target">+$${h.amt.toFixed(2)}</span>
                                 </div>`).join('')}
                             </div>
@@ -385,28 +430,16 @@
 
             showActions(item, domId) {
                 this.selectedItem = item;
-                this.selectedDomId = domId; // 記住當前 DOM ID 供展開使用
+                this.selectedDomId = domId;
                 const isLoan = item.type === 'loan';
-                const amt = isLoan ? item.principal_amount : item.amount;
+                document.getElementById('selected-info').innerHTML = `<strong>${isLoan ? '借款' : '還款'}</strong><br>${item.description}<br>金額: $${parseFloat(isLoan ? item.principal_amount : item.amount).toFixed(2)}`;
                 
-                document.getElementById('selected-info').innerHTML = `
-                    <strong style="color:${isLoan ? 'var(--accent-color)' : 'var(--repay-color)'}">
-                        ${isLoan ? '借款' : '還款'}
-                    </strong><br>
-                    ${item.transaction_date}<br>${item.description}<br>金額: $${parseFloat(amt).toFixed(2)}
-                `;
-
-                // 動態生成按鈕
-                let buttonsHtml = '';
-                if (isLoan) {
-                    buttonsHtml += `<button class="action-btn btn-info" onclick="App.toggleDetails()">查看利息算式</button>`;
-                }
-                buttonsHtml += `
-                    <button class="action-btn btn-edit" onclick="App.editItem()">編輯此項目</button>
-                    <button class="action-btn btn-delete" onclick="App.deleteItem()">刪除記錄</button>
-                    <button class="action-btn btn-cancel" onclick="App.closeActions()">取消</button>
-                `;
-                document.getElementById('action-buttons').innerHTML = buttonsHtml;
+                let btns = '';
+                if (isLoan) btns += `<button class="action-btn" style="background:#2c2c2e;color:var(--accent-color)" onclick="App.toggleDetails()">查看利息算式</button>`;
+                btns += `<button class="action-btn btn-edit" onclick="App.editItem()">編輯項目</button>
+                         <button class="action-btn btn-delete" onclick="App.deleteItem()">刪除記錄</button>
+                         <button class="action-btn btn-cancel" onclick="App.closeActions()">取消</button>`;
+                document.getElementById('action-buttons').innerHTML = btns;
 
                 document.getElementById('action-overlay').style.display = 'flex';
                 setTimeout(() => document.getElementById('action-sheet').classList.add('show'), 10);
@@ -419,41 +452,27 @@
 
             toggleDetails() {
                 this.closeActions();
-                const el = document.getElementById(this.selectedDomId);
-                if (el) el.classList.toggle('expanded');
+                document.getElementById(this.selectedDomId).classList.toggle('expanded');
             },
 
             async deleteItem() {
-                if (!confirm("確定要刪除這筆記錄嗎？")) return;
+                if (!confirm("確定刪除？")) return;
                 const table = this.selectedItem.type === 'loan' ? 'loan_records' : 'repayment_records';
-                const { error } = await this.sb.from(table).delete().eq('id', this.selectedItem.id);
-                if (error) alert(error.message);
-                else {
-                    this.closeActions();
-                    this.refreshData(); // 使用 refreshData 代替 reload
-                }
+                await this.sb.from(table).delete().eq('id', this.selectedItem.id);
+                this.closeActions();
+                this.refreshData();
             },
 
             async editItem() {
                 const isLoan = this.selectedItem.type === 'loan';
-                const oldAmt = isLoan ? this.selectedItem.principal_amount : this.selectedItem.amount;
-                const newAmt = prompt("修改金額:", parseFloat(oldAmt).toFixed(2));
-                if (newAmt === null || isNaN(newAmt)) return;
-                
-                const newDesc = prompt("修改描述:", this.selectedItem.description);
-                if (newDesc === null) return;
-
+                const newAmt = prompt("修改金額:", parseFloat(isLoan ? this.selectedItem.principal_amount : this.selectedItem.amount).toFixed(2));
+                if (!newAmt) return;
                 const table = isLoan ? 'loan_records' : 'repayment_records';
-                const payload = { description: newDesc };
-                if (isLoan) payload.principal_amount = parseFloat(newAmt).toFixed(2);
-                else payload.amount = parseFloat(newAmt).toFixed(2);
-
-                const { error } = await this.sb.from(table).update(payload).eq('id', this.selectedItem.id);
-                if (error) alert(error.message);
-                else {
-                    this.closeActions();
-                    this.refreshData(); // 使用 refreshData 代替 reload
-                }
+                const payload = { description: prompt("修改描述:", this.selectedItem.description) };
+                if (isLoan) payload.principal_amount = newAmt; else payload.amount = newAmt;
+                await this.sb.from(table).update(payload).eq('id', this.selectedItem.id);
+                this.closeActions();
+                this.refreshData();
             },
 
             togglePrivacy() {
@@ -471,39 +490,21 @@
 
             async submit() {
                 const date = document.getElementById('in-date').value;
-                const desc = document.getElementById('in-desc').value;
                 const amt = document.getElementById('in-amt').value;
-                if (!date || !amt || isNaN(amt)) return alert("請填寫正確金額");
-
-                const btn = document.getElementById('btn-submit');
-                btn.classList.add('loading');
-                btn.innerText = '處理中...';
-
+                if (!date || !amt) return alert("請填寫金額");
                 const table = this.currentMode === 'loan' ? 'loan_records' : 'repayment_records';
-                const payload = { transaction_date: date, description: desc || '未分類' };
-                const formattedAmt = parseFloat(amt).toFixed(2);
-
-                if (this.currentMode === 'loan') payload.principal_amount = formattedAmt;
-                else payload.amount = formattedAmt;
-
-                const { error } = await this.sb.from(table).insert([payload]);
-                
-                btn.classList.remove('loading');
-                btn.innerText = this.currentMode === 'loan' ? '確認借款入帳' : '確認還款記錄';
-
-                if (error) alert(error.message);
-                else {
-                    // 清空輸入
-                    document.getElementById('in-desc').value = '';
-                    document.getElementById('in-amt').value = '';
-                    this.refreshData(); // 使用 refreshData 代替 reload
-                }
+                const payload = { transaction_date: date, description: document.getElementById('in-desc').value || '未分類' };
+                if (this.currentMode === 'loan') payload.principal_amount = amt; else payload.amount = amt;
+                await this.sb.from(table).insert([payload]);
+                document.getElementById('in-desc').value = '';
+                document.getElementById('in-amt').value = '';
+                this.refreshData();
             }
         };
 
         window.onload = () => {
             document.getElementById('in-date').valueAsDate = new Date();
-            App.init();
+            Intro.start();
         };
     </script>
 </body>
